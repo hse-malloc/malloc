@@ -3,9 +3,9 @@
 ## Build & Run
 
 ```sh
-cmake -S . -B build
-cmake --build build
-./build/malloc_example
+$ cmake -S . -B build
+$ cmake --build build
+$ ./build/malloc_example
 ```
 
 ### Docker
