@@ -5,8 +5,7 @@
 ```sh
 cmake -S . -B build
 cmake --build build
-cma
-./build/example
+./build/malloc_example
 ```
 
 ### Docker
