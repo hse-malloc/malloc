@@ -1,0 +1,10 @@
+get_filename_component(MALLOC_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+list(APPEND CMAKE_MODULE_PATH ${MALLOC_CMAKE_DIR})
+
+if(NOT TARGET Malloc::Malloc)
+	include("${MALLOC_CMAKE_DIR}/malloc-targets.cmake")
+endif()
+
+set(MALLOC_LIBRARIES Malloc::Malloc)
