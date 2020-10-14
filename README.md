@@ -10,8 +10,7 @@
 ## Build
 
 ```sh
-$ git clone https://github.com/hse-malloc/malloc.git
-$ cd malloc/lib
+$ git clone https://github.com/hse-malloc/malloc.git && cd malloc
 
 $ cmake -S . -B build
 
@@ -34,8 +33,6 @@ $ ctest
 ## Docker
 
 ```sh
-$ cd lib
-
 $ docker build -t malloc .
 
 $ docker run --rm malloc

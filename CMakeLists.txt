@@ -9,7 +9,7 @@ project(libmalloc
 add_library(malloc STATIC
 	src/malloc.cpp
 )
-add_library(Malloc::malloc ALIAS malloc)
+add_library(Malloc::Malloc ALIAS malloc)
 set_target_properties(malloc PROPERTIES
 	EXPORT_NAME Malloc
 	PUBLIC_HEADER
