@@ -1,0 +1,7 @@
+@PACKAGE_INIT@
+
+set_and_check(MALLOC_INSTALL_CONDIGDIR "@PACKAGE_INSTALL_CONFIGDIR@")
+
+include("${MALLOC_INSTALL_CONDIGDIR}/malloc-targets.cmake")
+
+check_required_components(malloc)

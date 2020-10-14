@@ -39,25 +39,30 @@ set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/malloc)
 install(EXPORT malloc-targets
 	DESTINATION ${INSTALL_CONFIGDIR}
 	NAMESPACE Malloc::
-	FILE malloc-config.cmake
+	FILE malloc-targets.cmake
 )
 
-# include(CMakePackageConfigHelpers)
-# set(INCLUDE_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-# configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/malloc-config.cmake.in
-# 	${CMAKE_CURRENT_BINARY_DIR}/malloc-config.cmake
-# 	INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
-# 	PATH_VARS INCLUDE_INSTALL_DIR
-# )
-# write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/malloc-config-version.cmake
-# 	VERSION ${PROJECT_VERSION}
-# 	COMPATIBILITY AnyNewerVersion
-# )
-# install(FILES
-# 	${CMAKE_CURRENT_BINARY_DIR}/malloc-config.cmake
-# 	${CMAKE_CURRENT_BINARY_DIR}/malloc-config-version.cmake
-# 	DESTINATION ${INSTALL_CONFIGDIR}
-# )
+include(CMakePackageConfigHelpers)
+
+#set(INCLUDE_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/config.cmake.in
+ 	${CMAKE_CURRENT_BINARY_DIR}/malloc-config.cmake
+	PATH_VARS INSTALL_CONFIGDIR
+ 	INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+	INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}
+)
+
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/malloc-config-version.cmake
+ 	VERSION ${PROJECT_VERSION}
+ 	COMPATIBILITY AnyNewerVersion
+)
+
+install(FILES
+ 	${CMAKE_CURRENT_BINARY_DIR}/malloc-config.cmake
+ 	${CMAKE_CURRENT_BINARY_DIR}/malloc-config-version.cmake
+ 	DESTINATION ${INSTALL_CONFIGDIR}
+)
 
 enable_testing()
 add_subdirectory(test)
