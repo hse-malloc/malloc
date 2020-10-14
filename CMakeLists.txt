@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
-project(libmalloc
+project(malloc
 	VERSION 0.1
 	DESCRIPTION "custom malloc() implementation with randomized addresses"
 	LANGUAGES CXX
@@ -23,7 +23,7 @@ target_include_directories(malloc PUBLIC
 
 target_compile_features(malloc PRIVATE cxx_std_20)
 target_compile_options(malloc PRIVATE
-    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
+    $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
     -Wall -Wextra -Wpedantic>)
 
 include(GNUInstallDirs)

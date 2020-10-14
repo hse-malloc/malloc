@@ -10,6 +10,6 @@ add_executable(${PROJECT_NAME}
 )
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
 
-find_package(Malloc REQUIRED)
+find_package(malloc REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Malloc::Malloc)
 
