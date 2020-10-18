@@ -8,4 +8,9 @@ namespace mymalloc {
 	void mem_free(void*);
 }
 
+namespace hse {
+	void* malloc(std::size_t);
+	void free(void*);
+}
+
 #endif // MALLOC_HPP
