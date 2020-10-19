@@ -8,6 +8,9 @@ project(malloc
 
 add_library(malloc STATIC
 	src/malloc.cpp
+	src/system/system.cpp
+	src/memory/memory_control_block.cpp
+	src/memory/allocator.cpp
 )
 add_library(Malloc::Malloc ALIAS malloc)
 set_target_properties(malloc PROPERTIES
@@ -16,9 +19,12 @@ set_target_properties(malloc PROPERTIES
 		include/malloc/malloc.h
 )
 
-target_include_directories(malloc PUBLIC
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-	$<INSTALL_INTERFACE:include>
+target_include_directories(malloc
+	PUBLIC
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/malloc>
+		$<INSTALL_INTERFACE:include>
+	PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_compile_features(malloc PRIVATE cxx_std_20)
@@ -28,10 +34,10 @@ target_compile_options(malloc PRIVATE
 
 include(GNUInstallDirs)
 install(TARGETS malloc EXPORT malloc-targets
-	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/malloc
 	LIBRARY       DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE       DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	INCLUDES      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+	INCLUDES      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/malloc
 )
 
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/malloc)
