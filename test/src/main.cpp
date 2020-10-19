@@ -15,28 +15,29 @@ int main() {
         << "sizeof(bool): " << sizeof(bool) << std::endl
         << "sizeof(void*): " << sizeof(void*) << std::endl;
     std::cout << "sizeof(T) = " << sizeof(int) << " bytes" << std::endl;
-    int* ptrs[N];
+    int* ptrs[N][(4096-40-40)/sizeof(int*)+1];
+    std::cout << "sizeof(ptrs) = " << sizeof(ptrs) << ", sizeof(ptrs[i]) = " << sizeof(ptrs[0]) << std::endl;
     for (int ii = 0; ii < 2; ++ii) {
         for (int i = 0; i < N; ++i) {
             // std::cout << i << std::endl;
-            auto ptr = reinterpret_cast<int*>(hse::malloc(sizeof(int)));
+            auto ptr = reinterpret_cast<int*>(hse::malloc(sizeof(ptrs[i])));
             std::cout << "[MALLOC] #" << i << ": " << std::hex << std::showbase << ptr
                << std::resetiosflags(std::ios_base::hex | std::ios_base::showbase) << std::endl; 
             *ptr = i;
-            ptrs[i] = ptr;
+            ptrs[i][0] = ptr;
             // ptrs[i] = ptr1;
             assertm(*ptr == i, "value was set to 1");
             // hse::free(ptr1);
         }
 
         for (int i = 0; i < N; ++i) {
-            std::cout << "[FREE] #" << i << ": " << ptrs[i]
+            std::cout << "[FREE] #" << i << ": " << std::hex << std::showbase << ptrs[i][0]
                 << std::resetiosflags(std::ios_base::hex | std::ios_base::showbase) << std::endl;
-            if (*ptrs[i] != i) {
-                std::cerr << "!!!!!!!!!!!!!!!!! *ptrs[" << i << "] = " << *ptrs[i] << " != " << i << std::endl;
-            }
-            assertm(*ptrs[i] == i, "wrong value");
-            hse::free(ptrs[i]);
+            // if (*ptrs[i] != i) {
+            //     std::cerr << "!!!!!!!!!!!!!!!!! *ptrs[" << i << "] = " << *ptrs[i] << " != " << i << std::endl;
+            // }
+            // assertm(*ptrs[i] == i, "wrong value");
+            hse::free(ptrs[i][0]);
         }
     }
     // for (auto&& ptr : ptrs)
