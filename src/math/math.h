@@ -12,7 +12,7 @@ namespace hse::math {
 		return num & (-multiplier);
 	}
 
-	// roundDown returns munumum multiple of given multiplier,
+	// roundUp returns munumum multiple of given multiplier,
 	// which is not less than given num
 	template<typename T, typename = std::enable_if<std::is_integral<T>::value>>
 	constexpr T roundUp(T num, T multiplier) noexcept {
