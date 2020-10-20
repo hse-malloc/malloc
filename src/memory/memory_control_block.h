@@ -41,7 +41,7 @@ namespace hse::memory {
 				MemoryControlBlock *nextFree = nullptr);
 		
 		// spaceNeeded returns how many bytes is needed for block with given size
-		static std::size_t spaceNeeded(std::size_t size) noexcept;
+		static std::size_t spaceNeeded(std::size_t) noexcept;
 
 		// data returns a pointer to data which this block holds
 		std::uintptr_t data() const noexcept;
