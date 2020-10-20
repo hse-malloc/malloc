@@ -31,7 +31,7 @@ namespace hse::math {
 		return num | (1 << n);
 	}
 
-	// setNethBit sets nth bit of given num to 1 starting from zero
+	// clearNethBit sets nth bit of given num to 0 starting from zero
 	template<typename T, typename = std::enable_if<std::is_integral<T>::value>>
 	constexpr T clearNthBit(T num, std::uint8_t n) noexcept {
 		return num & ~(1 << n);
