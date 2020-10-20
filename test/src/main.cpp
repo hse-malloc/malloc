@@ -18,10 +18,12 @@ int main() {
             auto ptr = reinterpret_cast<T*>(hse::malloc(sizeof(T)));
             *ptr = i;
             ptrs[i] = ptr;
+            // std::cout << "[MALLOC] "<< i << ": " << ptr << std::endl;
         }
         for (std::size_t i = 0; i < N; ++i) {
             assertm(*ptrs[i] == i, "value was set to 1");
             hse::free(ptrs[i]);
+            // std::cout << "[FREE] "<< i << ": " << ptrs[i] << std::endl;
         }
     }
     return 0;

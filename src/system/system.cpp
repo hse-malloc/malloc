@@ -1,7 +1,5 @@
 #include "system.h"
 
-#include <iomanip>
-#include <ios>
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <unistd.h>

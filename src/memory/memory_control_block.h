@@ -2,16 +2,15 @@
 #define MEMORY_CONTROL_BLOCK_H
 
 #include <cstddef>
+#include <cstdint>
 
 namespace hse::memory {
 	// MemoryControlBlock is placed right before
 	// every allocated block of memory and describes following block
 	class MemoryControlBlock {
 	private:
-		// busy_ denotes availability of block
-		bool busy_;
-
-		// size_ is size of block data in bytes
+		// size_ holds availability of block in first least bit
+		// and size of block in rest. Thus, size of block is always 2-aligned
 		std::size_t size_;
 
 		// prev_ holds pointer to previous block in same chunk.
@@ -30,16 +29,23 @@ namespace hse::memory {
 		// If it is nullptr then there is no previous free block and this block is
 		// the first in chain of free blocks
 		MemoryControlBlock *nextFree_;
-		
+
 		// setPrevFree sets previous free block in chain of free blocks
 		// and sets its next free block to current
 		void setPrevFree(MemoryControlBlock*) noexcept;
 	public:
-		MemoryControlBlock(bool busy = false, 
+		MemoryControlBlock( 
 				std::size_t size = 0,
 				MemoryControlBlock *prev = nullptr,
 				MemoryControlBlock *prevFree = nullptr,
 				MemoryControlBlock *nextFree = nullptr);
+		
+		// spaceNeeded returns how many bytes is needed for block with given size
+		static std::size_t spaceNeeded(std::size_t size) noexcept;
+
+		// data returns a pointer to data which this block holds
+		std::uintptr_t data() const noexcept;
+
 		// size returns the size of data in bytes
 		std::size_t size() const noexcept;
 
@@ -47,10 +53,10 @@ namespace hse::memory {
 		bool empty() const noexcept;
 
 		// setSize sets size of block
-		void setSize(std::size_t) noexcept;
+		std::size_t setSize(std::size_t) noexcept;
 
 		// grow increases size of block by given value
-		void grow(std::size_t) noexcept;
+		std::size_t grow(std::size_t) noexcept;
 
 		// fits returns if there is enough space in block for given size
 		bool fits(std::size_t) const noexcept;
@@ -64,10 +70,10 @@ namespace hse::memory {
 		// busy returns if the block is marked as busy
 		bool busy() const noexcept;
 
-		// makeBusy marks block as busy
+		// setBusy marks block as busy
 		void setBusy() noexcept;
 
-		// makeFree marks block as free
+		// setFree marks block as free
 		void setFree() noexcept;
 
 		// prev returns a pointer to previous block in same chunk.

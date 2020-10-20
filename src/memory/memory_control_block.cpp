@@ -1,35 +1,44 @@
 #include "memory_control_block.h"
+#include "math/math.h"
 
 #include <cstddef>
 #include <cstdint>
 
 namespace hse::memory {
-	MemoryControlBlock::MemoryControlBlock(bool busy, 
+	MemoryControlBlock::MemoryControlBlock(
 		std::size_t size,
 		MemoryControlBlock *prev,
 		MemoryControlBlock *prevFree,
 		MemoryControlBlock *nextFree): 
-			busy_(busy),
 			size_(size),
 			prev_(prev) {
+		this->setSize(size);
 		this->setPrevFree(prevFree);
 		this->setNextFree(nextFree);
 	}
 
+	std::size_t MemoryControlBlock::spaceNeeded(std::size_t size) noexcept {
+		return sizeof(MemoryControlBlock) + math::roundUp<std::size_t>(size, 2);
+	}
+
+	std::uintptr_t MemoryControlBlock::data() const noexcept {
+		return reinterpret_cast<std::uintptr_t>(this + 1);
+	}
+
 	std::size_t MemoryControlBlock::size() const noexcept {
-		return this->size_;
+		return math::roundDown<std::size_t>(this->size_, 2);
 	}
 	
 	bool MemoryControlBlock::empty() const noexcept {
 		return this->size() == 0;
 	}
 	
-	void MemoryControlBlock::setSize(std::size_t size) noexcept {
-		this->size_ = size;
+	std::size_t MemoryControlBlock::setSize(std::size_t size) noexcept {
+		return (this->size_ = math::roundUp<std::size_t>(size, 2) | this->busy());
 	}
 	
-	void MemoryControlBlock::grow(std::size_t size) noexcept {
-		this->size_ += size;
+	std::size_t MemoryControlBlock::grow(std::size_t size) noexcept {
+		return this->setSize(this->size() + size);
 	}
 	
 	bool MemoryControlBlock::fits(std::size_t size) const noexcept {
@@ -37,7 +46,8 @@ namespace hse::memory {
 	}
 	
 	MemoryControlBlock* MemoryControlBlock::split(std::size_t size) noexcept {
-		if (this->busy() || !this->fits(size + sizeof(MemoryControlBlock) + 1))
+		size = math::roundUp<std::size_t>(size, 2);
+		if (this->busy() || !this->fits(size + sizeof(MemoryControlBlock) + 2))
 			return nullptr;
 
 		std::size_t oldSize = this->size();
@@ -55,16 +65,17 @@ namespace hse::memory {
 	}
 
 	bool MemoryControlBlock::busy() const noexcept {
-		return this->busy_;
+		return math::nthBit(this->size_, 0);
 	}
 	
 	void MemoryControlBlock::setBusy() noexcept { 
-		this->busy_ = true;
+		this->size_ = math::setNthBit(this->size_, 0);
 		this->popFree();
 	}
+
 	
 	void MemoryControlBlock::setFree() noexcept {
-		this->busy_ = false;
+		this->size_ = math::clearNthBit(this->size_, 0);
 	}
 	
 	MemoryControlBlock* MemoryControlBlock::prev() const noexcept {

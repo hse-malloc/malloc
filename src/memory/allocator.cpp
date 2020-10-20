@@ -41,11 +41,12 @@ namespace hse::memory {
 	}
 
 	MemoryControlBlock* Allocator::allocChunk(std::size_t size) {
-		std::size_t needSpace = sizeof(MemoryControlBlock) + size + sizeof(MemoryControlBlock);
-		std::size_t totalSize = math::roundUp(needSpace, system::PAGE_SIZE);
+		std::size_t spaceForEnd = MemoryControlBlock::spaceNeeded(0);
+		std::size_t spaceNeeded = MemoryControlBlock::spaceNeeded(size) + spaceForEnd;
+		std::size_t totalSize = math::roundUp(spaceNeeded, system::PAGE_SIZE);
 		
 		MemoryControlBlock *mcb = reinterpret_cast<MemoryControlBlock*>(system::mmap(totalSize));
-		mcb->setSize(totalSize - sizeof(MemoryControlBlock) - sizeof(MemoryControlBlock));
+		mcb->setSize(totalSize - sizeof(MemoryControlBlock) - spaceForEnd);
 		this->prependFree(mcb);
 		MemoryControlBlock* end = mcb->next();
 		end->setPrev(mcb);
@@ -83,13 +84,13 @@ namespace hse::memory {
 			from = math::roundDown(reinterpret_cast<std::uintptr_t>(mcb), system::PAGE_SIZE);
 		else
 			// we do not want to corrupt previous blocks in this page
-			from = math::roundUp(reinterpret_cast<std::uintptr_t>(mcb + 1), system::PAGE_SIZE);
+			from = math::roundUp(mcb->data(), system::PAGE_SIZE);
 
 		MemoryControlBlock *next = mcb->next();
 		std::uintptr_t to;
 		if (next->endOfChunk())
 			// end of chunk can be not page-aligned
-			to = math::roundUp(reinterpret_cast<std::uintptr_t>(next + 1), system::PAGE_SIZE);
+			to = math::roundUp(next->data(), system::PAGE_SIZE);
 		else
 			// we do not want to corrunt next blocks in this page
 			to = math::roundDown(reinterpret_cast<std::uintptr_t>(next), system::PAGE_SIZE);
@@ -102,13 +103,13 @@ namespace hse::memory {
 		// store block in case it is in pages we are to delete
 		MemoryControlBlock mcbStored = *mcb;
 
-		system::munmap(reinterpret_cast<std::uintptr_t>(from), len);
+		system::munmap(from, len);
 
-		if (std::ptrdiff_t diff = from - reinterpret_cast<std::uintptr_t>(mcb + 1); diff >= 0) {
+		if (std::ptrdiff_t diff = from - mcb->data(); diff >= 0) {
 			// mcb was not first in chunk since moved foreward
-			if (diff >= static_cast<std::ptrdiff_t>(1 + sizeof(MemoryControlBlock))) {
+			if (diff >= static_cast<std::ptrdiff_t>(MemoryControlBlock::spaceNeeded(1))) {
 				// there is enough space for non-empty block
-				mcb->setSize(diff - sizeof(MemoryControlBlock));
+				mcb->setSize(diff - MemoryControlBlock::spaceNeeded(0));
 				MemoryControlBlock *end = mcb->next();
 				end->setPrev(mcb);
 				end->makeEndOfChunk();
@@ -126,11 +127,11 @@ namespace hse::memory {
 
 		if (std::ptrdiff_t diff = reinterpret_cast<std::uintptr_t>(next) - to; diff >= 0) {
 			// next was not last in chunk since moved backward
-			if (diff >= static_cast<std::ptrdiff_t>(sizeof(MemoryControlBlock) + 1)) {
+			if (diff >= static_cast<std::ptrdiff_t>(MemoryControlBlock::spaceNeeded(1))) {
 				// there is enough space for non-empty block
 				MemoryControlBlock *first = reinterpret_cast<MemoryControlBlock*>(to);
 				first->setFree();
-				first->setSize(diff - sizeof(MemoryControlBlock) - sizeof(MemoryControlBlock));
+				first->setSize(diff - sizeof(MemoryControlBlock) - MemoryControlBlock::spaceNeeded(0));
 				first->makeFirstInChunk();
 				next->setPrev(first);
 				this->prependFree(first);
