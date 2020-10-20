@@ -10,7 +10,6 @@ namespace hse::memory {
 		MemoryControlBlock *prev,
 		MemoryControlBlock *prevFree,
 		MemoryControlBlock *nextFree): 
-			size_(size),
 			prev_(prev) {
 		this->setSize(size);
 		this->setPrevFree(prevFree);
