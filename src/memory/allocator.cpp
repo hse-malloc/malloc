@@ -5,8 +5,12 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <random>
 
 namespace hse::memory {
+
+    std::mt19937 Allocator::randomGenerator(std::random_device{}());
+
 	void Allocator::prependFree(MemoryControlBlock *mcb) noexcept {
 		mcb->setNextFree(this->firstFree);
 		this->firstFree = mcb;
@@ -30,10 +34,22 @@ namespace hse::memory {
 
 	MemoryControlBlock* Allocator::allocBlock(std::size_t size) {
 		MemoryControlBlock *mcb = this->searchFit(size);
-		if (!mcb)
+        if (!mcb)
 			mcb = this->allocChunk(size);
 
-		mcb->split(size);
+        std::size_t offset_mcb_size = 0;
+        std::size_t offset_mcb_size_min = 2;
+        if(mcb->size() >= size + sizeof(MemoryControlBlock) + offset_mcb_size_min)
+        {
+            //randomize lenght of offset MCB from min to max value
+            std::size_t reminded_size = mcb->size() - (size + sizeof(MemoryControlBlock));
+            std::size_t offset_mcb_size_max = reminded_size;
+            offset_mcb_size = std::uniform_int_distribution<std::size_t>
+                    (offset_mcb_size_min, offset_mcb_size_max)
+                    (Allocator::randomGenerator);
+        }
+
+        mcb = mcb->split(offset_mcb_size);
 
 		this->popFree(mcb);
 		mcb->setBusy();
@@ -43,7 +59,7 @@ namespace hse::memory {
 	MemoryControlBlock* Allocator::allocChunk(std::size_t size) {
 		std::size_t spaceForEnd = MemoryControlBlock::spaceNeeded(0);
 		std::size_t spaceNeeded = MemoryControlBlock::spaceNeeded(size) + spaceForEnd;
-		std::size_t totalSize = math::roundUp(spaceNeeded, system::PAGE_SIZE);
+        std::size_t totalSize = math::roundUp(spaceNeeded, system::PAGE_SIZE);
 		
 		MemoryControlBlock *mcb = reinterpret_cast<MemoryControlBlock*>(system::mmap(totalSize));
 		mcb->setSize(totalSize - sizeof(MemoryControlBlock) - spaceForEnd);

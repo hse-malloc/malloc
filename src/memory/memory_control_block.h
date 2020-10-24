@@ -65,6 +65,7 @@ namespace hse::memory {
 		// where first of them has given size.
 		// On success it returns pointer to second block,
 		// nullptr otherwise
+        // Spliting by 0 size means returning the given MCB pointer.
 		MemoryControlBlock* split(std::size_t) noexcept;
 		
 		// busy returns if the block is marked as busy

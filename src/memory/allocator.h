@@ -5,11 +5,15 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <random>
 
 namespace hse::memory {
 	// Allocator is responsible for managing allocated memory pages and chunks of blocks
 	class Allocator {
 	private:
+        //PRNG generator which is used in every call to random value
+        static std::mt19937 randomGenerator;
+
 		// firstFree is a pointer to first block in chain of free blocks
 		MemoryControlBlock *firstFree;
 

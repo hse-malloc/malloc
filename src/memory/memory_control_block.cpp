@@ -45,6 +45,9 @@ namespace hse::memory {
 	}
 	
 	MemoryControlBlock* MemoryControlBlock::split(std::size_t size) noexcept {
+        if(!size)
+            return this;
+
 		size = math::roundUp<std::size_t>(size, 2);
 		if (this->busy() || !this->fits(size + sizeof(MemoryControlBlock) + 2))
 			return nullptr;
