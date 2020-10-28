@@ -34,22 +34,17 @@ namespace hse::memory {
 
 	MemoryControlBlock* Allocator::allocBlock(std::size_t size) {
 		MemoryControlBlock *mcb = this->searchFit(size);
-        if (!mcb)
+		if (!mcb)
 			mcb = this->allocChunk(size);
 
-        std::size_t offset_mcb_size = 0;
-        std::size_t offset_mcb_size_min = 2;
-        if(mcb->size() >= size + sizeof(MemoryControlBlock) + offset_mcb_size_min)
-        {
-            //randomize lenght of offset MCB from min to max value
-            std::size_t reminded_size = mcb->size() - (size + sizeof(MemoryControlBlock));
-            std::size_t offset_mcb_size_max = reminded_size;
-            offset_mcb_size = std::uniform_int_distribution<std::size_t>
-                    (offset_mcb_size_min, offset_mcb_size_max)
-                    (Allocator::randomGenerator);
-        }
+		// if there is a space to prepend padding block
+		if (mcb->fits(2 + MemoryControlBlock::spaceNeeded(size)))
+			mcb = mcb->split(std::uniform_int_distribution<std::size_t>
+					(1, mcb->size() - MemoryControlBlock::spaceNeeded(size))
+					(Allocator::randomGenerator));
 
-        mcb = mcb->split(offset_mcb_size);
+		// split block to not waste space
+		mcb->split(size);
 
 		this->popFree(mcb);
 		mcb->setBusy();
@@ -111,15 +106,14 @@ namespace hse::memory {
 			// we do not want to corrunt next blocks in this page
 			to = math::roundDown(reinterpret_cast<std::uintptr_t>(next), system::PAGE_SIZE);
 		
-		std::ptrdiff_t len = to - from;
-		if (len < system::PAGE_SIZE)
+		if (to < from + system::PAGE_SIZE)
 			// there is no free pages to delete
 			return;
 		
 		// store block in case it is in pages we are to delete
 		MemoryControlBlock mcbStored = *mcb;
 
-		system::munmap(from, len);
+		system::munmap(from, to - from);
 
 		if (std::ptrdiff_t diff = from - mcb->data(); diff >= 0) {
 			// mcb was not first in chunk since moved foreward
