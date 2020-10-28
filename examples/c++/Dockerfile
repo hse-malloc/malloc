@@ -7,4 +7,4 @@ COPY . .
 RUN cmake -S . -B build \
   && cmake --build build
 
-ENTRYPOINT ["./build/malloc_example"]
+ENTRYPOINT ["./build/malloc_example_c++"]

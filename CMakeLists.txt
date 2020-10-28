@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 project(malloc
-	VERSION 0.1
+	VERSION 1.0
 	DESCRIPTION "custom malloc() implementation with randomized addresses"
 	LANGUAGES CXX
 )
 
-add_library(malloc STATIC
+add_library(malloc SHARED
 	src/malloc.cpp
 	src/system/system.cpp
 	src/memory/memory_control_block.cpp
