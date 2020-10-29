@@ -2,14 +2,15 @@
 #include "memory_control_block.h"
 #include "math/math.h"
 #include "system/system.h"
+#include "random/random.h"
 
 #include <cstddef>
 #include <cstdint>
-#include <random>
+#include <chrono>
 
 namespace hse::memory {
 
-    std::mt19937 Allocator::randomGenerator(std::random_device{}());
+    sc69069_t Allocator::randomGenerator(timeToInt());
 
 	void Allocator::prependFree(MemoryControlBlock *mcb) noexcept {
 		mcb->setNextFree(this->firstFree);
@@ -39,7 +40,7 @@ namespace hse::memory {
 
 		// if there is a space to prepend padding block
 		if (mcb->fits(2 + MemoryControlBlock::spaceNeeded(size)))
-			mcb = mcb->split(std::uniform_int_distribution<std::size_t>
+            mcb = mcb->split(uniform_int_distribution<std::size_t>
 					(1, mcb->size() - MemoryControlBlock::spaceNeeded(size))
 					(Allocator::randomGenerator));
 

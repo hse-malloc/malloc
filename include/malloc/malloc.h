@@ -5,7 +5,6 @@
 
 #include <cstddef>
 
-
 namespace hse {
     void* malloc(std::size_t);
     void free(void*);
@@ -14,8 +13,16 @@ namespace hse {
 extern "C" {
 #endif
 
-void* hse_malloc(unsigned long);
-void hse_free(void*);
+void* malloc(unsigned long)
+#if __cplusplus
+noexcept
+#endif
+;
+void free(void*)
+#if __cplusplus
+noexcept
+#endif
+;
 
 #ifdef __cplusplus
 }

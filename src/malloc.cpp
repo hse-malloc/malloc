@@ -16,5 +16,21 @@ namespace hse {
 	}
 }
 
-extern "C" void* hse_malloc(unsigned long size) { return hse::malloc(size); }
-extern "C" void  hse_free(void* ptr) { hse::free(ptr); }
+extern "C" void* hse_malloc(unsigned long size) noexcept {
+    try {
+        return hse::malloc(size);
+    }
+    catch (...) {
+        return nullptr;
+    }
+}
+
+extern "C" void free(void* ptr) noexcept {
+    try {
+        hse::free(ptr);
+    }
+    catch (...) {
+        return ;
+    }
+}
+
