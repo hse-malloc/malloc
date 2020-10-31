@@ -2,7 +2,7 @@
 
 ## Requirements
 
-* `gcc`
+* `clang`
 * `make`
 * `cmake`
 
@@ -12,7 +12,11 @@
 ```sh
 $ git clone https://github.com/hse-malloc/malloc.git && cd malloc
 
-$ cmake -S . -B build
+$ cmake \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_CXX_CLANG_TIDY="clang-tidy" \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -B build
 
 $ cmake --build build
 ```
