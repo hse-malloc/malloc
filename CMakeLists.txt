@@ -6,46 +6,49 @@ project(malloc
 	LANGUAGES CXX
 )
 
-add_library(malloc SHARED
+add_library(${PROJECT_NAME} SHARED
 	src/malloc.cpp
 	src/system/system.cpp
 	src/memory/memory_control_block.cpp
 	src/memory/allocator.cpp
 )
-add_library(Malloc::Malloc ALIAS malloc)
-set_target_properties(malloc PROPERTIES
+add_library(Malloc::Malloc ALIAS ${PROJECT_NAME})
+set_target_properties(${PROJECT_NAME} PROPERTIES
 	EXPORT_NAME Malloc
 	PUBLIC_HEADER
-		include/malloc/malloc.h
+		include/malloc.h
 )
 
-target_include_directories(malloc
+target_include_directories(${PROJECT_NAME}
 	PUBLIC
-		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/malloc>
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 		$<INSTALL_INTERFACE:include>
 	PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_compile_features(malloc PRIVATE cxx_std_20)
-target_compile_options(malloc PRIVATE
-    $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
-    -Wall -Wextra -Wpedantic>)
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
+target_compile_options(${PROJECT_NAME} PRIVATE
+	$<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
+		-Wall
+		-Wextra
+		-Wpedantic
+	>)
 
 include(GNUInstallDirs)
-install(TARGETS malloc EXPORT malloc-targets
-	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/malloc
+install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}-targets
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
 	LIBRARY       DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE       DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	INCLUDES      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/malloc
+	INCLUDES      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
 )
 
-set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/malloc)
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
-install(EXPORT malloc-targets
+install(EXPORT ${PROJECT_NAME}-targets
 	DESTINATION ${INSTALL_CONFIGDIR}
 	NAMESPACE Malloc::
-	FILE malloc-targets.cmake
+	FILE ${PROJECT_NAME}-targets.cmake
 )
 
 include(CMakePackageConfigHelpers)
@@ -53,20 +56,20 @@ include(CMakePackageConfigHelpers)
 #set(INCLUDE_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/config.cmake.in
- 	${CMAKE_CURRENT_BINARY_DIR}/malloc-config.cmake
+	${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
 	PATH_VARS INSTALL_CONFIGDIR
  	INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
 	INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}
 )
 
-write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/malloc-config-version.cmake
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake
  	VERSION ${PROJECT_VERSION}
  	COMPATIBILITY AnyNewerVersion
 )
 
 install(FILES
- 	${CMAKE_CURRENT_BINARY_DIR}/malloc-config.cmake
- 	${CMAKE_CURRENT_BINARY_DIR}/malloc-config-version.cmake
+	${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
+	${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake
  	DESTINATION ${INSTALL_CONFIGDIR}
 )
 

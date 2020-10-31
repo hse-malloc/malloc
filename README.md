@@ -14,6 +14,7 @@ $ git clone https://github.com/hse-malloc/malloc.git && cd malloc
 
 $ cmake \
   -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_CXX_CLANG_TIDY="clang-tidy" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -B build

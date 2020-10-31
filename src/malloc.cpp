@@ -7,30 +7,28 @@
 namespace hse {
 	memory::Allocator allocator;
 
-    void* malloc(std::size_t size) {
+	void* malloc(size_t size) {
 		return reinterpret_cast<void*>(allocator.alloc(size));
 	}
 
-    void free(void *ptr) {
+	void free(void *ptr) {
 		allocator.free(reinterpret_cast<std::uintptr_t>(ptr));
 	}
-}
+} // namespace hse
 
-extern "C" void* hse_malloc(unsigned long size) noexcept {
-    try {
-        return hse::malloc(size);
-    }
-    catch (...) {
-        return nullptr;
-    }
-}
+extern "C" {
+	#include <stddef.h>
 
-extern "C" void free(void* ptr) noexcept {
-    try {
-        hse::free(ptr);
-    }
-    catch (...) {
-        return ;
-    }
-}
+	void* malloc(size_t size) try {
+		return hse::malloc(size);
+	} catch (...) {
+		return nullptr;
+	}
+
+	void free(void *ptr) try {
+		hse::free(ptr);
+	} catch (...) {
+		return;
+	}
+} // extern "C"
 
