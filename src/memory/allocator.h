@@ -45,6 +45,7 @@ namespace hse::memory {
 		// tryUnmap tries to unmap memory pages within given block
 		void tryUnmap(MemoryControlBlock*);
 
+
 	public:
 		// alloc allocates memory for holding given number of bytes
 		std::uintptr_t alloc(std::size_t);
