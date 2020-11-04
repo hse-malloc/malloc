@@ -8,7 +8,7 @@
 ```sh
 $ cmake \
   -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_CLANG_TIDY="clang-tidy" \
+  -DCMAKE_C_CLANG_TIDY="clang-tidy" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -B build
 $ cmake --build build

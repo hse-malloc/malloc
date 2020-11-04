@@ -6,7 +6,7 @@ project(malloc
 	LANGUAGES CXX
 )
 
-add_library(${PROJECT_NAME} SHARED
+add_library(${PROJECT_NAME}
 	src/malloc.cpp
 	src/system/system.cpp
 	src/memory/memory_control_block.cpp

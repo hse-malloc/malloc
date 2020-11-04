@@ -46,4 +46,4 @@ FROM build AS test
 
 WORKDIR build
 
-ENTRYPOINT ["ctest"]
+ENTRYPOINT ["ctest", "--output-on-failure"]
