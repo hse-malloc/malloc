@@ -5,36 +5,14 @@
 #include <cstddef>
 
 namespace hse {
-
-struct throw_tag_t{};
-
-extern throw_tag_t throw_tag;
-
-
     extern "C" {
-
 #endif // __cplusplus
 
-extern
-void*
-malloc(unsigned long)
-
-#ifdef __cplusplus
-noexcept
-#endif
-;
-
-extern
-void
-free(void*)
-#ifdef __cplusplus
-noexcept
-#endif
-;
+    void* malloc(std::size_t);
+    void free(void*);
 
 #ifdef __cplusplus
     } // extern "C"
-
 } // namespace hse
 #endif // __cplusplus
 
