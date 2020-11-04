@@ -16,7 +16,7 @@ int main() {
     for (std::size_t r = 0; r < ROUNDS; ++r) {
         for (std::size_t i = 0; i < N; ++i) {
             std::cout << "[MALLOC] " << i << ": ";
-            auto ptr = reinterpret_cast<T*>(hse::malloc(sizeof(T)));
+            auto ptr = reinterpret_cast<T*>(std::malloc(sizeof(T)));
             std::cout << ptr << std::endl;
             *ptr = i;
             ptrs[i] = ptr;
@@ -24,7 +24,7 @@ int main() {
         for (std::size_t i = 0; i < N; ++i) {
             std::cout << "[FREE] "<< i << ": " << ptrs[i] << std::endl;
             assertm(*ptrs[i] == i, "value was set to 1");
-            hse::free(ptrs[i]);
+            std::free(ptrs[i]);
         }
     }
     return 0;

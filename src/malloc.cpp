@@ -4,13 +4,13 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace hse {
-    memory::Allocator allocator{};
+namespace std {
+	hse::memory::Allocator _allocator{};
 
     extern "C" {
-        void* malloc(std::size_t size) {
+        void* malloc(size_t size) {
             try {
-                return reinterpret_cast<void*>(allocator.alloc(size));
+                return reinterpret_cast<void*>(_allocator.alloc(size));
             } catch (...) {
 				return nullptr;
 			}
@@ -18,9 +18,9 @@ namespace hse {
 
         void free(void *ptr) {
             try {
-                allocator.free(reinterpret_cast<std::uintptr_t>(ptr));
+                _allocator.free(reinterpret_cast<std::uintptr_t>(ptr));
             } catch (...) {}
         }
     }
-} // namespace hse
+} // namespace std
 

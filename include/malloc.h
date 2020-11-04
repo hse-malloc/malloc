@@ -4,16 +4,18 @@
 #ifdef __cplusplus
 #include <cstddef>
 
-namespace hse {
+namespace std {
     extern "C" {
 #endif // __cplusplus
+    #include <stddef.h>
 
-    void* malloc(std::size_t);
+    void* malloc(size_t);
     void free(void*);
 
 #ifdef __cplusplus
     } // extern "C"
-} // namespace hse
+} // namespace std
+
 #endif // __cplusplus
 
 #endif // MALLOC_HPP
