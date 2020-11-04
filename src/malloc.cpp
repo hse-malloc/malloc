@@ -5,30 +5,33 @@
 #include <cstdint>
 
 namespace hse {
-	memory::Allocator allocator;
+    memory::Allocator allocator{};
+    throw_tag_t throw_tag{};
 
-	void* malloc(size_t size) {
+    void* malloc(std::size_t size, const throw_tag_t& ) {
 		return reinterpret_cast<void*>(allocator.alloc(size));
 	}
 
-	void free(void *ptr) {
+    void free(void *ptr, const throw_tag_t&) {
 		allocator.free(reinterpret_cast<std::uintptr_t>(ptr));
 	}
+
+    extern "C"
+    {
+        void* malloc(std::size_t size) noexcept {
+            try {
+                return reinterpret_cast<void*>(allocator.alloc(size));
+            } catch (...) { return nullptr; }
+        }
+
+        void free(void *ptr)  noexcept {
+            try {
+                allocator.free(reinterpret_cast<std::uintptr_t>(ptr));
+            } catch (...) {}
+        }
+
+    }
+
 } // namespace hse
 
-extern "C" {
-	#include <stddef.h>
-
-	void* malloc(size_t size) try {
-		return hse::malloc(size);
-	} catch (...) {
-		return nullptr;
-	}
-
-	void free(void *ptr) try {
-		hse::free(ptr);
-	} catch (...) {
-		return;
-	}
-} // extern "C"
 

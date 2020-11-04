@@ -3,15 +3,38 @@
 
 #ifdef __cplusplus
 #include <cstddef>
-#include <new>
 
 namespace hse {
-#else
-#include <stddef.h>
+
+struct throw_tag_t{};
+
+extern throw_tag_t throw_tag;
+
+
+    extern "C" {
+
 #endif // __cplusplus
-    void* malloc(size_t);
-    void free(void*);
+
+extern
+void*
+malloc(unsigned long)
+
 #ifdef __cplusplus
+noexcept
+#endif
+;
+
+extern
+void
+free(void*)
+#ifdef __cplusplus
+noexcept
+#endif
+;
+
+#ifdef __cplusplus
+    } // extern "C"
+
 } // namespace hse
 #endif // __cplusplus
 

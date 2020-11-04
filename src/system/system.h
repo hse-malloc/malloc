@@ -6,7 +6,7 @@
 
 namespace hse::system {
 	// PAGE_SIZE is a page size of memory
-	extern const std::size_t PAGE_SIZE;
+    extern std::size_t PAGE_SIZE();
 
 	// mmap allocates integer number of PRIVATE ANONYMOUS pages in memory
 	// for READ and WRITE permissions capable of holding size bytes

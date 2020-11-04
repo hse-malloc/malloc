@@ -9,7 +9,6 @@
 #include <system_error>
 
 namespace hse::system {
-	const std::size_t PAGE_SIZE = sysconf(_SC_PAGESIZE);
 
 	// sysconf returns the value configurable system variable by given name
 	long sysconf(int name) {
@@ -30,4 +29,10 @@ namespace hse::system {
 		if (::munmap(reinterpret_cast<void*>(addr), len) == -1)
 			throw std::system_error(errno, std::system_category(), "munmap");
 	}
+
+    extern std::size_t PAGE_SIZE()
+    {
+        static std::size_t PAGE_SIZE = hse::system::sysconf(_SC_PAGE_SIZE);
+        return PAGE_SIZE;
+    }
 }
