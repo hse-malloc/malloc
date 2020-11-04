@@ -1,7 +1,7 @@
 #ifndef RANDOM_H
 #define RANDOM_H
 
-#include "math.h"
+#include "math/math.h"
 
 #include <cstdint>
 #include <type_traits>

@@ -55,7 +55,7 @@ namespace hse::memory {
 	MemoryControlBlock* Allocator::allocChunk(std::size_t size) {
 		std::size_t spaceForEnd = MemoryControlBlock::spaceNeeded(0);
 		std::size_t spaceNeeded = MemoryControlBlock::spaceNeeded(size) + spaceForEnd;
-        std::size_t totalSize = math::roundUp(spaceNeeded, system::PAGE_SIZE);
+        std::size_t totalSize = math::roundUp(spaceNeeded, system::PAGE_SIZE());
 		
 		MemoryControlBlock *mcb = reinterpret_cast<MemoryControlBlock*>(system::mmap(totalSize));
 		mcb->setSize(totalSize - sizeof(MemoryControlBlock) - spaceForEnd);
@@ -93,23 +93,23 @@ namespace hse::memory {
 		std::uintptr_t from;
 		if (mcb->firstInChunk())
 			// first block in chunk can be not page-aligned
-			from = math::roundDown(reinterpret_cast<std::uintptr_t>(mcb), system::PAGE_SIZE);
+            from = math::roundDown(reinterpret_cast<std::uintptr_t>(mcb), system::PAGE_SIZE());
 		else
 			// we do not want to corrupt previous blocks in this page
-			from = math::roundUp(mcb->data(), system::PAGE_SIZE);
+            from = math::roundUp(mcb->data(), system::PAGE_SIZE());
 
 		MemoryControlBlock *next = mcb->next();
 		std::uintptr_t to;
 		if (next->endOfChunk())
 			// end of chunk can be not page-aligned
-			to = math::roundUp(next->data(), system::PAGE_SIZE);
+            to = math::roundUp(next->data(), system::PAGE_SIZE());
 		else
 			// we do not want to corrunt next blocks in this page
-			to = math::roundDown(reinterpret_cast<std::uintptr_t>(next), system::PAGE_SIZE);
+            to = math::roundDown(reinterpret_cast<std::uintptr_t>(next), system::PAGE_SIZE());
 		
-		if (to < from + system::PAGE_SIZE)
+        if (to < from + system::PAGE_SIZE())
 			// there is no free pages to delete
-			return;
+            return;
 		
 		// store block in case it is in pages we are to delete
 		MemoryControlBlock mcbStored = *mcb;
