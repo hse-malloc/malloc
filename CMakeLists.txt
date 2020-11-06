@@ -7,6 +7,7 @@ project(malloc
 )
 
 add_library(${PROJECT_NAME}
+	include/malloc.h
 	src/malloc.cpp
 	src/system/system.cpp
 	src/system/system.h
