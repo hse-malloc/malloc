@@ -13,7 +13,7 @@ namespace hse::memory {
 class Allocator {
   private:
     // PRNG generator which is used in every call to random value
-    static sc69069_t randomGenerator;
+    static thread_local sc69069_t randomGenerator;
 
     // firstFree is a pointer to first block in chain of free blocks
     MemoryControlBlock *firstFree;

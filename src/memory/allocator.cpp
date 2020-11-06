@@ -8,10 +8,12 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <random>
 
 namespace hse::memory {
 
-sc69069_t Allocator::randomGenerator(timeToInt());
+thread_local sc69069_t Allocator::randomGenerator(std::random_device("/dev/urandom")());
+
 
 void Allocator::prependFree(MemoryControlBlock *mcb) noexcept {
     mcb->setNextFree(this->firstFree);

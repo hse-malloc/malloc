@@ -13,7 +13,7 @@
 #endif
 
 namespace std {
-static hse::memory::Allocator _allocator{};
+thread_local hse::memory::Allocator _allocator{};
 
 extern "C" {
 void *malloc(size_t size) noexcept {
