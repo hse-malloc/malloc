@@ -8,7 +8,7 @@ namespace std {
 	hse::memory::Allocator _allocator{};
 
     extern "C" {
-        void* malloc(size_t size) {
+        void* malloc(size_t size) noexcept {
             try {
                 return reinterpret_cast<void*>(_allocator.alloc(size));
             } catch (...) {
@@ -16,7 +16,7 @@ namespace std {
 			}
         }
 
-        void free(void *ptr) {
+        void free(void *ptr) noexcept {
             try {
                 _allocator.free(reinterpret_cast<std::uintptr_t>(ptr));
             } catch (...) {}
