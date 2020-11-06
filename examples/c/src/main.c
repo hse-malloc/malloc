@@ -3,7 +3,7 @@
 
 int main() {
 
-    int *ptr = (int*)malloc(111111111);
+    int *ptr = (int*)malloc(sizeof(int));
 
     printf("allocated %ld bytes as %p\n", sizeof(int), (void*)ptr);
     printf("uninitialized int: %d\n", *ptr);

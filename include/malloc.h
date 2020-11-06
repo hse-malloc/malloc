@@ -20,6 +20,7 @@ namespace std {
 
     void* malloc(size_t) __NOEXCEPT__;
     void free(void*) __NOEXCEPT__;
+    void* calloc(size_t num, size_t size ) __NOEXCEPT__;
 
 #ifdef __cplusplus
     } // extern "C"
