@@ -5,14 +5,19 @@
 #include <cstdint>
 #include <system_error>
 
-#include "unistd.h"
+#ifdef HSE_MALLOC_DEBUG
+#include <unistd.h>
+#define DEBUG_LOG(str) write(2, str"\n", sizeof(str));
+#else
+#define DEBUG_LOG(str) /* Ignore */
+#endif
 
 namespace std {
     static hse::memory::Allocator _allocator{};
 
     extern "C" {
         void* malloc(size_t size) noexcept {
-            write(1,"MALLOC\n", 7);
+            DEBUG_LOG("MALLOC");
             if(!size) return nullptr;
             try {
                 return reinterpret_cast<void*>(_allocator.alloc(size));
@@ -22,7 +27,7 @@ namespace std {
         }
 
         void free(void *ptr) noexcept {
-            write(2,"FREE\n", 5);
+            DEBUG_LOG("FREE");
             if(!ptr) return;
             try {
                 _allocator.free(reinterpret_cast<std::uintptr_t>(ptr));
@@ -31,7 +36,7 @@ namespace std {
 
         void* calloc(size_t num, size_t size ) noexcept
         {
-            write(2,"CALLOC\n", 7);
+            DEBUG_LOG("CALLOC");
             if(!num || !size) return nullptr;
             try {
                 // getting the pointer
@@ -54,7 +59,7 @@ namespace std {
 // only for throwing single object declaration
 void* operator new(std::size_t size)
 {
-    write(2,"NEW\n", 4);
+    DEBUG_LOG("NEW");
     try {
         return reinterpret_cast<void*>(std::_allocator.alloc(size));
     } catch (...) {
@@ -66,7 +71,7 @@ void* operator new(std::size_t size)
 // should be noexcept
 void operator delete(void* ptr) noexcept
 {
-    write(2,"DELETE\n", 7);
+    DEBUG_LOG("DELETE");
     if (!ptr) return;
     try {
         std::_allocator.free(reinterpret_cast<std::uintptr_t>(ptr));

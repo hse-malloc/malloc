@@ -19,6 +19,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 		include/malloc.h
 )
 
+target_compile_definitions(${PROJECT_NAME} PUBLIC "$<$<CONFIG:DEBUG>:HSE_MALLOC_DEBUG>")
+
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
