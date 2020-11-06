@@ -16,6 +16,10 @@ namespace hse::memory {
 		this->setNextFree(nextFree);
 	}
 
+	MemoryControlBlock* MemoryControlBlock::fromPtr(std::uintptr_t ptr) noexcept {
+		return reinterpret_cast<MemoryControlBlock*>(ptr) - 1;
+	}
+
 	std::size_t MemoryControlBlock::spaceNeeded(std::size_t size) noexcept {
 		return sizeof(MemoryControlBlock) + math::roundUp<std::size_t>(size, 2);
 	}
@@ -46,7 +50,7 @@ namespace hse::memory {
 	
 	MemoryControlBlock* MemoryControlBlock::split(std::size_t size) noexcept {
 		size = math::roundUp<std::size_t>(size, 2);
-		if (this->busy() || !this->fits(size + MemoryControlBlock::spaceNeeded(1)))
+		if (!this->fits(size + MemoryControlBlock::spaceNeeded(1)))
 			return this;
 
 		std::size_t oldSize = this->size();
@@ -86,7 +90,7 @@ namespace hse::memory {
 	}
 
 	MemoryControlBlock* MemoryControlBlock::next() const noexcept {
-		return reinterpret_cast<MemoryControlBlock*>(reinterpret_cast<std::uintptr_t>(this + 1) + this->size());
+		return reinterpret_cast<MemoryControlBlock*>(this->data() + this->size());
 	}
 
 	void MemoryControlBlock::absorbNext() noexcept {
@@ -97,8 +101,9 @@ namespace hse::memory {
 	}
 
 	void MemoryControlBlock::setPrevFree(MemoryControlBlock *prevFree) noexcept {
-		if ((this->prevFree_ = prevFree))
+		if ((this->prevFree_ = prevFree) != nullptr) {
 			prevFree->nextFree_ = this;
+		}
 	}
 
 	MemoryControlBlock* MemoryControlBlock::nextFree() const noexcept {

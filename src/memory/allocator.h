@@ -11,8 +11,8 @@ namespace hse::memory {
 	// Allocator is responsible for managing allocated memory pages and chunks of blocks
 	class Allocator {
 	private:
-        //PRNG generator which is used in every call to random value
-        static sc69069_t randomGenerator;
+		//PRNG generator which is used in every call to random value
+		static sc69069_t randomGenerator;
 
 		// firstFree is a pointer to first block in chain of free blocks
 		MemoryControlBlock *firstFree;
@@ -36,6 +36,14 @@ namespace hse::memory {
 		// allocChunk allocates memory pages for new block with given size
 		MemoryControlBlock* allocChunk(std::size_t);
 
+		// realloc(mcb, size) tries to enlarge size of given mcb to given size.
+		// If size is less than or equal to current size of mcb,
+		// then it shrinks it.
+		// If there is not enough room to enlarge size of given mcb,
+		// it allocates new MemoryControlBlock, copies the data from given mcb,
+		// frees the old mcb and returns a pointer to allocated MemoryControlBlock.
+		MemoryControlBlock* realloc(MemoryControlBlock*, std::size_t);
+
 		// freeBlock releases block back to chain of blocks,
 		// merges it with its neighbors and unmaps free memory pages
 		// within given block
@@ -45,18 +53,20 @@ namespace hse::memory {
 		// tryUnmap tries to unmap memory pages within given block
 		void tryUnmap(MemoryControlBlock*);
 
-
 	public:
-		// alloc allocates memory for holding given number of bytes
+		// alloc(size) allocates memory size bytes and returns a pointer to the allocated memory
 		std::uintptr_t alloc(std::size_t);
+
+		// realloc(ptr, size) reallocates memory pointed by ptr for given size and returns ptr.
+		// If size is less than or equal to current size of allocated memory pointer by ptr,
+		// then it shrinks it.
+		// If there is not enough room to enlarge memory allocation pointed by ptr,
+		// it allocates new allocation, copies the old data pointed to by ptr,
+		// frees the old allocation and returns a pointer to allocated memory.
+		std::uintptr_t realloc(std::uintptr_t, std::size_t);
 
 		// free deallocates memory pointed by given pointer
 		void free(std::uintptr_t);
-
-        // realloc reallocates memory for given ptr and size
-        // it may resize current mcb, do nothing, squeeze current mcb or
-        // allocate new mcb and copy data there depending on the input
-        std::uintptr_t realloc(std::uintptr_t, std::size_t);
 	};
 }
 

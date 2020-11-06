@@ -39,6 +39,8 @@ namespace hse::memory {
 				MemoryControlBlock *prev = nullptr,
 				MemoryControlBlock *prevFree = nullptr,
 				MemoryControlBlock *nextFree = nullptr);
+
+		static MemoryControlBlock* fromPtr(std::uintptr_t) noexcept;
 		
 		// spaceNeeded returns how many bytes is needed for block with given size
 		static std::size_t spaceNeeded(std::size_t) noexcept;

@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <chrono>
+#include <algorithm>
 
 namespace hse::memory {
 
@@ -19,7 +20,7 @@ namespace hse::memory {
 
 	MemoryControlBlock* Allocator::searchFit(std::size_t size) const noexcept {
 		MemoryControlBlock *mcb;
-		for (mcb = this->firstFree; mcb && !mcb->fits(size); mcb = mcb->nextFree());
+		for (mcb = this->firstFree; (mcb != nullptr) && !mcb->fits(size); mcb = mcb->nextFree());
 		return mcb;
 	}
 
@@ -30,19 +31,20 @@ namespace hse::memory {
 	}
 
 	std::uintptr_t Allocator::alloc(std::size_t size) {
-		return reinterpret_cast<std::uintptr_t>(this->allocBlock(size) + 1);
+		return this->allocBlock(size)->data();
 	}
 
 	MemoryControlBlock* Allocator::allocBlock(std::size_t size) {
 		MemoryControlBlock *mcb = this->searchFit(size);
-		if (!mcb)
+		if (mcb == nullptr)
 			mcb = this->allocChunk(size);
 
 		// if there is a space to prepend padding block
-		if (mcb->fits(2 + MemoryControlBlock::spaceNeeded(size)))
+		if (mcb->fits(2 + MemoryControlBlock::spaceNeeded(size))) {
             mcb = mcb->split(uniform_int_distribution<std::size_t>
 					(1, mcb->size() - MemoryControlBlock::spaceNeeded(size))
 					(Allocator::randomGenerator));
+		}
 
 		// split block to not waste space
 		mcb->split(size);
@@ -57,7 +59,7 @@ namespace hse::memory {
 		std::size_t spaceNeeded = MemoryControlBlock::spaceNeeded(size) + spaceForEnd;
         std::size_t totalSize = math::roundUp(spaceNeeded, system::PAGE_SIZE());
 		
-		MemoryControlBlock *mcb = reinterpret_cast<MemoryControlBlock*>(system::mmap(totalSize));
+		auto *mcb = reinterpret_cast<MemoryControlBlock*>(system::mmap(totalSize));
 		mcb->setSize(totalSize - sizeof(MemoryControlBlock) - spaceForEnd);
 		this->prependFree(mcb);
 		MemoryControlBlock* end = mcb->next();
@@ -66,8 +68,15 @@ namespace hse::memory {
 		return mcb;
 	}
 
+	std::uintptr_t Allocator::realloc(std::uintptr_t ptr, std::size_t size) {
+		// realloc(nullptr, size) is equal to alloc(size)
+		if (ptr == reinterpret_cast<std::uintptr_t>(nullptr))
+			return this->alloc(size);
+		return this->realloc(MemoryControlBlock::fromPtr(ptr), size)->data();
+	}
+
 	void Allocator::free(std::uintptr_t ptr) {
-		this->freeBlock(reinterpret_cast<MemoryControlBlock*>(ptr) - 1);
+		this->freeBlock(MemoryControlBlock::fromPtr(ptr));
 	}
 
 	void Allocator::freeBlock(MemoryControlBlock *mcb) {
@@ -98,7 +107,7 @@ namespace hse::memory {
 			// we do not want to corrupt previous blocks in this page
             from = math::roundUp(mcb->data(), system::PAGE_SIZE());
 
-		MemoryControlBlock *next = mcb->next();
+		auto *next = mcb->next();
 		std::uintptr_t to;
 		if (next->endOfChunk())
 			// end of chunk can be not page-aligned
@@ -140,7 +149,7 @@ namespace hse::memory {
 			// next was not last in chunk since moved backward
 			if (diff >= static_cast<std::ptrdiff_t>(MemoryControlBlock::spaceNeeded(1))) {
 				// there is enough space for non-empty block
-				MemoryControlBlock *first = reinterpret_cast<MemoryControlBlock*>(to);
+				auto *first = reinterpret_cast<MemoryControlBlock*>(to);
 				first->setFree();
 				first->setSize(diff - sizeof(MemoryControlBlock) - MemoryControlBlock::spaceNeeded(0));
 				first->makeFirstInChunk();
@@ -152,44 +161,26 @@ namespace hse::memory {
 		}
 	}
 
+    MemoryControlBlock* Allocator::realloc(MemoryControlBlock *mcb, std::size_t size) {
+		if (mcb->fits(size)) {
+			mcb->split(size);
+			return mcb;
+		}
 
-    std::uintptr_t Allocator::realloc(std::uintptr_t ptr, std::size_t new_size)
-    {
-        MemoryControlBlock* mcb = reinterpret_cast<MemoryControlBlock*>(ptr) - 1;
+		// check if there we can absorb next block and there will be enough space
+		if (auto *next = mcb->next();
+			!next->busy() && size <= mcb->size() + sizeof(MemoryControlBlock) + next->size()) {
+			mcb->absorbNext();
+			mcb->split(size); // mcb can be larger than we need after the absorption
+			return mcb;
+		}
 
-        // if we already have enought space
-        if(new_size <= mcb->size())
-        {
-            // squeezing MCB if possible
-            mcb->setFree();
-            mcb->split(new_size);
-            mcb->setBusy();
-
-            return ptr;
-        }
-
-        // if we can absorb next MCB and there will be enought space
-        if(!mcb->next()->busy() &&
-            mcb->next()->size() + mcb->size() + sizeof (MemoryControlBlock) <= new_size)
-        {
-            mcb->absorbNext();
-            return ptr;
-        }
-
-        // we need to allocate another block
-        std::uintptr_t new_mbc_data = this->alloc(new_size);
-
-        // and copy data
-        std::uintptr_t old_mbc_data = mcb->data();
-        for(std::size_t i=0; i<mcb->size(); ++i)
-        {
-            *(reinterpret_cast<std::uint8_t*>(new_mbc_data + i)) =
-                    *(reinterpret_cast<std::uint8_t*>(old_mbc_data + i));
-        }
-
-        // and free the old block
-        this->free(old_mbc_data);
-
-        return new_mbc_data;
+		auto *oldMCB = mcb;
+		mcb = this->allocBlock(size);
+		std::copy(reinterpret_cast<unsigned char*>(oldMCB->data()), 
+				reinterpret_cast<unsigned char*>(oldMCB->data() + oldMCB->size()),
+				mcb);
+		this->freeBlock(oldMCB);
+		return mcb;
     }
-}
+} // namespace hse::memory
