@@ -151,4 +151,45 @@ namespace hse::memory {
 				next->makeFirstInChunk();
 		}
 	}
+
+
+    std::uintptr_t Allocator::realloc(std::uintptr_t ptr, std::size_t new_size)
+    {
+        MemoryControlBlock* mcb = reinterpret_cast<MemoryControlBlock*>(ptr) - 1;
+
+        // if we already have enought space
+        if(new_size <= mcb->size())
+        {
+            // squeezing MCB if possible
+            mcb->setFree();
+            mcb->split(new_size);
+            mcb->setBusy();
+
+            return ptr;
+        }
+
+        // if we can absorb next MCB and there will be enought space
+        if(!mcb->next()->busy() &&
+            mcb->next()->size() + mcb->size() + sizeof (MemoryControlBlock) <= new_size)
+        {
+            mcb->absorbNext();
+            return ptr;
+        }
+
+        // we need to allocate another block
+        std::uintptr_t new_mbc_data = this->alloc(new_size);
+
+        // and copy data
+        std::uintptr_t old_mbc_data = mcb->data();
+        for(std::size_t i=0; i<mcb->size(); ++i)
+        {
+            *(reinterpret_cast<std::uint8_t*>(new_mbc_data + i)) =
+                    *(reinterpret_cast<std::uint8_t*>(old_mbc_data + i));
+        }
+
+        // and free the old block
+        this->free(old_mbc_data);
+
+        return new_mbc_data;
+    }
 }

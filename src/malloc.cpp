@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <system_error>
 
+
 #ifdef HSE_MALLOC_DEBUG
 #include <unistd.h>
 #define DEBUG_LOG(str) write(2, str"\n", sizeof(str));
@@ -48,7 +49,14 @@ namespace std {
                 return reinterpret_cast<void*>(ptr);
 
             } catch (...) { return nullptr; }
+        }
 
+        void* realloc(void* ptr, size_t size ) noexcept
+        {
+            if(!ptr || !size) return nullptr;
+            try {
+                return reinterpret_cast<void*>(_allocator.realloc(reinterpret_cast<std::uintptr_t>(ptr), size));
+            } catch (...) { return nullptr; }
         }
     }
 } // namespace std

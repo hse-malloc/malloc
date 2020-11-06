@@ -52,6 +52,11 @@ namespace hse::memory {
 
 		// free deallocates memory pointed by given pointer
 		void free(std::uintptr_t);
+
+        // realloc reallocates memory for given ptr and size
+        // it may resize current mcb, do nothing, squeeze current mcb or
+        // allocate new mcb and copy data there depending on the input
+        std::uintptr_t realloc(std::uintptr_t, std::size_t);
 	};
 }
 
