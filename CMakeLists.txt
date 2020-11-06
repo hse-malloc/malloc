@@ -9,8 +9,12 @@ project(malloc
 add_library(${PROJECT_NAME}
 	src/malloc.cpp
 	src/system/system.cpp
+	src/system/system.h
 	src/memory/memory_control_block.cpp
+	src/memory/memory_control_block.h
 	src/memory/allocator.cpp
+	src/memory/allocator.h
+	src/random/random.h
 )
 add_library(Malloc::Malloc ALIAS ${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -77,3 +81,10 @@ install(FILES
 
 enable_testing()
 add_subdirectory(test)
+
+add_custom_target(lint-fix
+	COMMAND clang-format
+	--style=file
+	-i
+	`echo "$<JOIN:$<TARGET_PROPERTY:${PROJECT_NAME},SOURCES>, >" `
+	WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
