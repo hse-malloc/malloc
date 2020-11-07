@@ -56,6 +56,7 @@ void *calloc(size_t num, size_t size) noexcept {
 }
 
 void *realloc(void *ptr, size_t size) noexcept {
+    DEBUG_LOG("REALLOC");
     if (!size)
         return nullptr;
     try {
@@ -65,6 +66,19 @@ void *realloc(void *ptr, size_t size) noexcept {
         return nullptr;
     }
 }
+
+void *aligned_alloc(size_t alignment, size_t size) noexcept {
+    DEBUG_LOG("ALIGNED_ALLOC");
+    if (!alignment || !size)
+        return nullptr;
+    try {
+        return reinterpret_cast<void *>(
+            _allocator.aligned_alloc(alignment, size));
+    } catch (...) {
+        return nullptr;
+    }
+}
+
 }
 } // namespace std
 
@@ -80,6 +94,18 @@ void *operator new(std::size_t size) {
     }
 }
 
+void *operator new(std::size_t size, std::align_val_t al) {
+    DEBUG_LOG("NEW");
+    try {
+        return reinterpret_cast<void *>(
+            std::_allocator.aligned_alloc(static_cast<std::size_t>(al), size));
+    } catch (...) {
+        throw std::bad_alloc{};
+    }
+}
+
+
+
 // should be noexcept
 void operator delete(void *ptr) noexcept {
     DEBUG_LOG("DELETE");
@@ -90,3 +116,24 @@ void operator delete(void *ptr) noexcept {
     } catch (...) {
     }
 }
+
+void operator delete(void *ptr, std::size_t) noexcept {
+    DEBUG_LOG("DELETE");
+    if (!ptr)
+        return;
+    try {
+        std::_allocator.free(reinterpret_cast<std::uintptr_t>(ptr));
+    } catch (...) {
+    }
+}
+
+void operator delete(void *ptr, std::align_val_t) noexcept {
+    DEBUG_LOG("DELETE");
+    if (!ptr)
+        return;
+    try {
+        std::_allocator.free(reinterpret_cast<std::uintptr_t>(ptr));
+    } catch (...) {
+    }
+}
+

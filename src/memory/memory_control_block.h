@@ -117,6 +117,17 @@ class MemoryControlBlock {
     // makeEndOfChunk marks block as end of chunk
     void makeEndOfChunk() noexcept;
 
+    // return true if mcb is aligned by provided argument
+    // zero aligment is always false
+    bool isAligned(std::size_t) const noexcept;
+
+    // returns the minimum needed shift for current block to be aligned
+    std::size_t minNeededShift(std::size_t) const noexcept;
+
+    // returns the maximum possible shift for current block to store provided size and to be alinged
+    // returns zero if it is not possible
+    std::size_t maxPossibleShift(std::size_t, std::size_t) const noexcept;
+
     // shifts the current mcb forward if it is free
     // it is not possible to shift the first MCB
     // returns the new location of MBC or the old one

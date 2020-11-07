@@ -37,10 +37,6 @@ class Allocator {
     // allocChunk allocates memory pages for new block with given size
     MemoryControlBlock *allocChunk(std::size_t);
 
-    // TO DO
-    // allocChunkAligned allocates memory pages for new block with given size and aligment
-    MemoryControlBlock *allocChunkAligned(std::size_t, std::size_t);
-
     // realloc(mcb, size) tries to enlarge size of given mcb to given size.
     // If size is less than or equal to current size of mcb,
     // then it shrinks it.
@@ -56,6 +52,11 @@ class Allocator {
 
     // tryUnmap tries to unmap memory pages within given block
     void tryUnmap(MemoryControlBlock *);
+
+    // returns the random shift for given MCB to store provided size and to be alinged
+    // from min possible value to max possible value
+    // returns zero if it is not possible
+    std::size_t randomShift(MemoryControlBlock*, std::size_t, std::size_t) const noexcept;
 
   public:
     // alloc(size) allocates memory size bytes and returns a pointer to the

@@ -79,58 +79,57 @@ MemoryControlBlock *Allocator::allocChunk(std::size_t size) {
     return mcb;
 }
 
-MemoryControlBlock *Allocator::allocChunkAligned(std::size_t aligment, std::size_t size) {
-    // TO DO: we need new function that will guarantee allocates new Chunk with given aligment
-}
 
-std::size_t needed_shift(MemoryControlBlock* mcb, std::size_t aligment)
+std::size_t Allocator::randomShift(MemoryControlBlock* mcb, std::size_t alignment, std::size_t needed_size) const noexcept
 {
-    return (mcb->data()%aligment == 0)? 0:(aligment - (mcb->data()%aligment));
+    std::size_t min_shift = mcb->minNeededShift(alignment);
+    std::size_t max_shift = mcb->maxPossibleShift(alignment, needed_size);
+    if(max_shift < min_shift)
+        return 0;
+
+    std::size_t random_block = uniform_int_distribution<std::size_t>
+            (0, (max_shift - min_shift)/alignment)
+            (Allocator::randomGenerator);
+
+    return min_shift + alignment * random_block;
 }
 
-
-std::uintptr_t Allocator::aligned_alloc(std::size_t aligment, std::size_t size)
+std::uintptr_t Allocator::aligned_alloc(std::size_t alignment, std::size_t size)
 {
     MemoryControlBlock *mcb;
-    for (mcb = this->firstFree;
-
-         (mcb != nullptr) && mcb->fits(size + needed_shift(mcb, aligment));
-
-         mcb = mcb->nextFree()) ;
-
-    bool isNewChunk = false;
-    if (mcb == nullptr){
-        mcb = this->allocChunkAligned(aligment, size);
-        mcb->popFree();
-        return mcb->data();
-    }
-
-    // if it is not the first MCB in Chunk therefore
-    // previous extist and we can resize is
-    if(mcb->prev()!=nullptr)
+    std::size_t min_shift;
+    for (mcb = this->firstFree, min_shift = mcb->minNeededShift(alignment);
+         mcb != nullptr;
+         mcb = mcb->nextFree(), min_shift  = mcb->minNeededShift(alignment))
     {
-        mcb = mcb->shiftForward(needed_shift(mcb, aligment));
-        mcb->popFree();
-        return mcb->data();
-    }
-    //there are 2 options if we have found a block that can be aligned
-    // 1) we have enough spase to create prepending MCB
-    // 2) there is not enouhg space for another MCB and
-    // in order not to leak memory we need to allocace another block
+        // if it is fits therefore it is highly likely that we can align
+        if (mcb->fits(size + min_shift))
+        {
+            if(mcb->prev()==nullptr)
+            {   // on the first block in chunk we need to check if we can prepend MCB
+                // and still be able to be aligned
+                if(MemoryControlBlock::spaceNeeded(1) <= mcb->maxPossibleShift(alignment, size))
+                    mcb = mcb->split(1); // at this point mcb->prev() will not be nullptr
+                else
+                    continue;
+            }
+            //if it is not the first block therefore we can align
+            break;
+        }
 
-    // check if we have enough space to insert mcb
-    if(MemoryControlBlock::spaceNeeded(needed_shift(mcb, aligment) + size <= mcb->size()))
+    }
+
+    if(mcb==nullptr)
     {
-        mcb->split(needed_shift(mcb, aligment));
-        mcb->next()->popFree();
-        return mcb->next()->data();
+        mcb = this->allocChunk(size+alignment+MemoryControlBlock::spaceNeeded(1));
+        mcb = mcb->split(1);
     }
 
-    // we can't so we need to allocate another chunk
-
-    mcb = this->allocChunkAligned(aligment, size);
+    std::size_t shift = this->randomShift(mcb, alignment, size);
+    mcb = mcb->shiftForward(shift);
     mcb->popFree();
     return mcb->data();
+
 }
 
 std::uintptr_t Allocator::realloc(std::uintptr_t ptr, std::size_t size) {
@@ -233,7 +232,8 @@ void Allocator::tryUnmap(MemoryControlBlock *mcb) {
 }
 
 MemoryControlBlock *Allocator::realloc(MemoryControlBlock *mcb,
-                                       std::size_t size) {
+                                       std::size_t size)
+{
     if (mcb->fits(size)) {
         mcb->split(size);
         return mcb;
@@ -251,8 +251,8 @@ MemoryControlBlock *Allocator::realloc(MemoryControlBlock *mcb,
     auto *oldMCB = mcb;
     mcb = this->allocBlock(size);
     std::copy(
-        reinterpret_cast<unsigned char *>(oldMCB->data()),
-        reinterpret_cast<unsigned char *>(oldMCB->data() + oldMCB->size()),
+        reinterpret_cast<unsigned short *>(oldMCB->data()),
+        reinterpret_cast<unsigned short *>(oldMCB->data() + oldMCB->size()),
         mcb);
     this->freeBlock(oldMCB);
     return mcb;

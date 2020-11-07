@@ -3,7 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
+//#include <cstring>
 
 namespace hse::memory {
 MemoryControlBlock::MemoryControlBlock(std::size_t size,
@@ -135,6 +135,21 @@ void MemoryControlBlock::makeEndOfChunk() noexcept {
     this->popFree();
 }
 
+bool MemoryControlBlock::isAligned(std::size_t aligment) const noexcept { return (aligment==0? false : this->data() % aligment); }
+
+std::size_t MemoryControlBlock::minNeededShift(std::size_t alignment) const noexcept
+{
+    return (this->isAligned(alignment)? 0:(alignment - (this->data()%alignment)));
+}
+
+std::size_t MemoryControlBlock::maxPossibleShift(std::size_t alignment, std::size_t needed_size) const noexcept
+{
+    std::size_t max_shift = this->minNeededShift(alignment);
+    if(needed_size + max_shift > this->size()) // it is not possible
+        return 0;
+    std::size_t remainded_space = this->size() - needed_size - max_shift;
+    return (remainded_space /alignment) * alignment + max_shift;
+}
 
 MemoryControlBlock* MemoryControlBlock::shiftForward(std::size_t size) noexcept
 {
