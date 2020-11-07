@@ -52,7 +52,24 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 		-Wall
 		-Wextra
 		-Wpedantic
-	>)
+        >
+        PUBLIC
+        $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
+        	$<$<CONFIG:DEBUG>:
+        		-fprofile-instr-generate
+        		-fcoverage-mapping
+        	>
+        >
+        )
+
+target_link_options(${PROJECT_NAME} PUBLIC
+        $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
+        	$<$<CONFIG:DEBUG>:
+        		-fprofile-instr-generate
+        		-fcoverage-mapping
+        	>
+        >
+    )
 
 include(GNUInstallDirs)
 install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}-targets

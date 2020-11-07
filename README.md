@@ -30,9 +30,21 @@ $ cmake --install build
 
 ## Test
 
+### Simple testing
+
 ```sh
 $ cd build
 $ ctest
+```
+
+### Coverage analysis
+
+```sh
+$ cd build/test
+$ ./malloc_test 1>/dev/null 2>/dev/null && \
+ llvm-profdata merge -o output.profdata default.profraw && \
+ llvm-cov report malloc_test --instr-profile=output.profdata && \
+ llvm-cov show malloc_test --instr-profile=output.profdata -format=html > report.html
 ```
 
 ## Docker
