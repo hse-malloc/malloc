@@ -12,8 +12,14 @@
 
 namespace hse::memory {
 
-thread_local sc69069_t Allocator::randomGenerator(std::random_device("/dev/urandom")());
 
+thread_local sc69069_t Allocator::randomGenerator(std::random_device
+#ifdef HAVE_DEV_URANDOM
+("/dev/urandom")
+#else
+{}
+#endif
+());
 
 void Allocator::prependFree(MemoryControlBlock *mcb) noexcept {
     mcb->setNextFree(this->firstFree);

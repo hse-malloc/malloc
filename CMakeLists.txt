@@ -12,19 +12,31 @@ add_library(${PROJECT_NAME}
 	src/system/system.cpp
 	src/system/system.h
 	src/memory/memory_control_block.cpp
-	src/memory/memory_control_block.h
+        src/memory/memory_control_block.h
 	src/memory/allocator.cpp
-	src/memory/allocator.h
-	src/random/random.h
+        src/memory/allocator.h
+        src/random/random.h
+        src/math/math.h
 )
 add_library(Malloc::Malloc ALIAS ${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES
+        CXX_EXTENSIONS OFF
 	EXPORT_NAME Malloc
 	PUBLIC_HEADER
 		include/malloc.h
 )
 
-target_compile_definitions(${PROJECT_NAME} PUBLIC "$<$<CONFIG:DEBUG>:HSE_MALLOC_DEBUG>")
+include(CheckCXXSourceCompiles)
+
+check_cxx_source_compiles("int main(){return __builtin_popcountll(1) ;}" HAVE_DEV_URANDOM)
+check_cxx_source_compiles(
+    "#include <random>
+     int main() { std::random_device(\"/dev/urandom\");}"
+     HAVE_DEV_URANDOM)
+
+target_compile_definitions(${PROJECT_NAME}
+    PRIVATE "$<$<CONFIG:DEBUG>:HSE_MALLOC_DEBUG>"
+    PRIVATE "$<$<BOOL:HAVE_DEV_URANDOM>:HAVE_DEV_URANDOM>")
 
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
@@ -59,8 +71,6 @@ install(EXPORT ${PROJECT_NAME}-targets
 )
 
 include(CMakePackageConfigHelpers)
-
-#set(INCLUDE_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/config.cmake.in
 	${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake

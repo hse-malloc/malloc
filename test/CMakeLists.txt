@@ -5,4 +5,6 @@ target_compile_features(malloc_test PRIVATE cxx_std_20)
 
 target_link_libraries(malloc_test PRIVATE malloc)
 
+set_target_properties(malloc_test PROPERTIES CXX_EXTENSIONS OFF)
+
 add_test(NAME malloc_test COMMAND malloc_test)
