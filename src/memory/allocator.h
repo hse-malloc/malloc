@@ -37,6 +37,10 @@ class Allocator {
     // allocChunk allocates memory pages for new block with given size
     MemoryControlBlock *allocChunk(std::size_t);
 
+    // TO DO
+    // allocChunkAligned allocates memory pages for new block with given size and aligment
+    MemoryControlBlock *allocChunkAligned(std::size_t, std::size_t);
+
     // realloc(mcb, size) tries to enlarge size of given mcb to given size.
     // If size is less than or equal to current size of mcb,
     // then it shrinks it.
@@ -65,6 +69,10 @@ class Allocator {
     // copies the old data pointed to by ptr, frees the old allocation and
     // returns a pointer to allocated memory.
     std::uintptr_t realloc(std::uintptr_t, std::size_t);
+
+    // aligned_alloc(aligment, size) allocates memory size bytes with specified
+    // aligment and returns a pointer to the allocated memory
+    std::uintptr_t aligned_alloc(std::size_t, std::size_t);
 
     // free deallocates memory pointed by given pointer
     void free(std::uintptr_t);

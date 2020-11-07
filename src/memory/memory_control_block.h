@@ -116,6 +116,13 @@ class MemoryControlBlock {
 
     // makeEndOfChunk marks block as end of chunk
     void makeEndOfChunk() noexcept;
+
+    // shifts the current mcb forward if it is free
+    // it is not possible to shift the first MCB
+    // returns the new location of MBC or the old one
+    // if operation was not possible
+    MemoryControlBlock* shiftForward(std::size_t) noexcept;
+
 };
 } // namespace hse::memory
 

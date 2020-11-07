@@ -79,6 +79,60 @@ MemoryControlBlock *Allocator::allocChunk(std::size_t size) {
     return mcb;
 }
 
+MemoryControlBlock *Allocator::allocChunkAligned(std::size_t aligment, std::size_t size) {
+    // TO DO: we need new function that will guarantee allocates new Chunk with given aligment
+}
+
+std::size_t needed_shift(MemoryControlBlock* mcb, std::size_t aligment)
+{
+    return (mcb->data()%aligment == 0)? 0:(aligment - (mcb->data()%aligment));
+}
+
+
+std::uintptr_t Allocator::aligned_alloc(std::size_t aligment, std::size_t size)
+{
+    MemoryControlBlock *mcb;
+    for (mcb = this->firstFree;
+
+         (mcb != nullptr) && mcb->fits(size + needed_shift(mcb, aligment));
+
+         mcb = mcb->nextFree()) ;
+
+    bool isNewChunk = false;
+    if (mcb == nullptr){
+        mcb = this->allocChunkAligned(aligment, size);
+        mcb->popFree();
+        return mcb->data();
+    }
+
+    // if it is not the first MCB in Chunk therefore
+    // previous extist and we can resize is
+    if(mcb->prev()!=nullptr)
+    {
+        mcb = mcb->shiftForward(needed_shift(mcb, aligment));
+        mcb->popFree();
+        return mcb->data();
+    }
+    //there are 2 options if we have found a block that can be aligned
+    // 1) we have enough spase to create prepending MCB
+    // 2) there is not enouhg space for another MCB and
+    // in order not to leak memory we need to allocace another block
+
+    // check if we have enough space to insert mcb
+    if(MemoryControlBlock::spaceNeeded(needed_shift(mcb, aligment) + size <= mcb->size()))
+    {
+        mcb->split(needed_shift(mcb, aligment));
+        mcb->next()->popFree();
+        return mcb->next()->data();
+    }
+
+    // we can't so we need to allocate another chunk
+
+    mcb = this->allocChunkAligned(aligment, size);
+    mcb->popFree();
+    return mcb->data();
+}
+
 std::uintptr_t Allocator::realloc(std::uintptr_t ptr, std::size_t size) {
     // realloc(nullptr, size) is equal to alloc(size)
     if (ptr == reinterpret_cast<std::uintptr_t>(nullptr))

@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 namespace hse::memory {
 MemoryControlBlock::MemoryControlBlock(std::size_t size,
@@ -133,4 +134,23 @@ void MemoryControlBlock::makeEndOfChunk() noexcept {
     this->setSize(0);
     this->popFree();
 }
+
+
+MemoryControlBlock* MemoryControlBlock::shiftForward(std::size_t size) noexcept
+{
+    if(this->busy() || this->prev()==nullptr || size == 0)
+        return this;
+
+    size = math::roundUp<std::size_t>(size, 2);
+    auto* new_mcb = reinterpret_cast<MemoryControlBlock*>(reinterpret_cast<std::uintptr_t>(this+size));
+
+    this->prev()->grow(size);
+    this->next()->setPrev(new_mcb);
+
+    new_mcb->setPrevFree(this->prevFree_);
+    new_mcb->setNextFree(this->nextFree_);
+    new_mcb->size_ = this->size_;
+    return new_mcb;
+}
+
 } // namespace hse::memory
