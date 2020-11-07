@@ -56,7 +56,7 @@ void *calloc(size_t num, size_t size) noexcept {
 }
 
 void *realloc(void *ptr, size_t size) noexcept {
-    if (!ptr || !size)
+    if (!size)
         return nullptr;
     try {
         return reinterpret_cast<void *>(
