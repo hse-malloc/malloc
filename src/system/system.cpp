@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cerrno>
 #include <system_error>
 
 namespace hse::system {
@@ -32,7 +33,8 @@ void munmap(std::uintptr_t addr, std::size_t len) {
 }
 
 extern std::size_t PAGE_SIZE() {
-    static std::size_t PAGE_SIZE = hse::system::sysconf(_SC_PAGE_SIZE);
+    static std::size_t PAGE_SIZE = system::sysconf(_SC_PAGE_SIZE);
     return PAGE_SIZE;
 }
+
 } // namespace hse::system

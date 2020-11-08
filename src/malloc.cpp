@@ -1,26 +1,34 @@
 #include "malloc.h"
+#include "math/math.h"
 #include "memory/allocator.h"
 
-#include <cstddef>
+#include <cstddef> // NOLINT(llvmlibc-restrict-system-libc-headers)
 #include <cstdint>
+#include <numeric>
+#include <cerrno>
 #include <system_error>
 
 #ifdef HSE_MALLOC_DEBUG
 #include <unistd.h>
-#define DEBUG_LOG(str) write(2, str "\n", sizeof(str));
+#define DEBUG_LOG(msg) write(2, msg "\n", sizeof(msg));
 #else
-#define DEBUG_LOG(str) /* Ignore */
+#define DEBUG_LOG(msg) /* Ignore */
 #endif
 
-namespace std {
-thread_local hse::memory::Allocator _allocator{};
+namespace std { // NOLINT(cert-dcl58-cpp)
+
+static hse::memory::Allocator _allocator{};
 
 extern "C" {
+
 void *malloc(size_t size) noexcept {
     DEBUG_LOG("MALLOC");
-    if (!size)
+    if (size == 0) {
         return nullptr;
+    }
+
     try {
+        // NOLINTNEXTLINT(cppcoreguidelines-pro-type-reinterpret-cast])
         return reinterpret_cast<void *>(_allocator.alloc(size));
     } catch (...) {
         return nullptr;
@@ -29,27 +37,30 @@ void *malloc(size_t size) noexcept {
 
 void free(void *ptr) noexcept {
     DEBUG_LOG("FREE");
-    if (!ptr)
+    if (ptr == nullptr) {
         return;
+    }
+
     try {
         _allocator.free(reinterpret_cast<std::uintptr_t>(ptr));
     } catch (...) {
     }
 }
 
-void *calloc(size_t num, size_t size) noexcept {
+void *calloc(size_t count, size_t size) noexcept {
     DEBUG_LOG("CALLOC");
-    if (!num || !size)
+    if (count == 0 || size == 0) {
         return nullptr;
-    try {
-        // getting the pointer
-        std::size_t count_bytes = num * size;
-        auto ptr = _allocator.alloc(count_bytes);
-        // initializing with 0
-        for (std::size_t i = 0; i < count_bytes; ++i)
-            *(reinterpret_cast<std::uint8_t *>(ptr + i)) = 0;
-        return reinterpret_cast<void *>(ptr);
+    }
 
+    try {
+        std::size_t numBytes = count * size;
+        auto *ptr = malloc(numBytes);
+
+        iota(reinterpret_cast<std::uint8_t *>(ptr),
+             reinterpret_cast<std::uint8_t *>(ptr) + numBytes,
+             0);
+        return ptr;
     } catch (...) {
         return nullptr;
     }
@@ -57,11 +68,12 @@ void *calloc(size_t num, size_t size) noexcept {
 
 void *realloc(void *ptr, size_t size) noexcept {
     DEBUG_LOG("REALLOC");
-    if (!size)
+    if (size == 0) {
         return nullptr;
+    }
+
     try {
-        return reinterpret_cast<void *>(
-            _allocator.realloc(reinterpret_cast<std::uintptr_t>(ptr), size));
+        return reinterpret_cast<void *>(_allocator.realloc(reinterpret_cast<std::uintptr_t>(ptr), size));
     } catch (...) {
         return nullptr;
     }
@@ -69,17 +81,21 @@ void *realloc(void *ptr, size_t size) noexcept {
 
 void *aligned_alloc(size_t alignment, size_t size) noexcept {
     DEBUG_LOG("ALIGNED_ALLOC");
-    if (!alignment || !size)
+    if (size == 0 || alignment < sizeof(void*)
+        || !hse::math::isPowerOf2(alignment)
+        || size % alignment != 0) {
+        errno = EINVAL;
         return nullptr;
+    }
+
     try {
-        return reinterpret_cast<void *>(
-            _allocator.aligned_alloc(alignment, size));
+        return reinterpret_cast<void *>(_allocator.aligned_alloc(alignment, size));
     } catch (...) {
         return nullptr;
     }
 }
 
-}
+} // extern "C"
 } // namespace std
 
 // Should be in global namespace
@@ -103,8 +119,6 @@ void *operator new(std::size_t size, std::align_val_t al) {
         throw std::bad_alloc{};
     }
 }
-
-
 
 // should be noexcept
 void operator delete(void *ptr) noexcept {
@@ -136,4 +150,3 @@ void operator delete(void *ptr, std::align_val_t) noexcept {
     } catch (...) {
     }
 }
-

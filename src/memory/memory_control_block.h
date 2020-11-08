@@ -39,9 +39,10 @@ class MemoryControlBlock {
                        MemoryControlBlock *prevFree = nullptr,
                        MemoryControlBlock *nextFree = nullptr);
 
-    static MemoryControlBlock *fromPtr(std::uintptr_t) noexcept;
+    // fromDataPtr returns pointer to block which controls data pointed by given ptr
+    static MemoryControlBlock *fromDataPtr(std::uintptr_t) noexcept;
 
-    // spaceNeeded returns how many bytes is needed for block with given size
+    // spaceNeeded returns the number of bytes is needed for block with given size
     static std::size_t spaceNeeded(std::size_t) noexcept;
 
     // data returns a pointer to data which this block holds
@@ -124,16 +125,15 @@ class MemoryControlBlock {
     // returns the minimum needed shift for current block to be aligned
     std::size_t minNeededShift(std::size_t) const noexcept;
 
-    // returns the maximum possible shift for current block to store provided size and to be alinged
-    // returns zero if it is not possible
+    // returns the maximum possible shift for current block to store provided
+    // size and to be alinged returns zero if it is not possible
     std::size_t maxPossibleShift(std::size_t, std::size_t) const noexcept;
 
     // shifts the current mcb forward if it is free
     // it is not possible to shift the first MCB
     // returns the new location of MBC or the old one
     // if operation was not possible
-    MemoryControlBlock* shiftForward(std::size_t) noexcept;
-
+    MemoryControlBlock *shiftForward(std::size_t) noexcept;
 };
 } // namespace hse::memory
 

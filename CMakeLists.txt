@@ -12,11 +12,13 @@ add_library(${PROJECT_NAME}
 	src/system/system.cpp
 	src/system/system.h
 	src/memory/memory_control_block.cpp
-        src/memory/memory_control_block.h
+	src/memory/memory_control_block.h
+	src/memory/memory_control_block_list.cpp
+	src/memory/memory_control_block_list.h
 	src/memory/allocator.cpp
-        src/memory/allocator.h
-        src/random/random.h
-        src/math/math.h
+	src/memory/allocator.h
+	src/random/random.h
+	src/math/math.h
 )
 add_library(Malloc::Malloc ALIAS ${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES

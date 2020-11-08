@@ -12,116 +12,96 @@
 
 namespace hse::memory {
 
+sc69069_t Allocator::randomGenerator(std::random_device
 
-thread_local sc69069_t Allocator::randomGenerator(std::random_device
 #ifdef HAVE_DEV_URANDOM
-("/dev/urandom")
+                                                  ("/dev/urandom")
 #else
-{}
+                                                  {}
 #endif
-());
-
-void Allocator::prependFree(MemoryControlBlock *mcb) noexcept {
-    mcb->setNextFree(this->firstFree);
-    this->firstFree = mcb;
-}
-
-MemoryControlBlock *Allocator::searchFit(std::size_t size) const noexcept {
-    MemoryControlBlock *mcb;
-    for (mcb = this->firstFree; (mcb != nullptr) && !mcb->fits(size);
-         mcb = mcb->nextFree())
-        ;
-    return mcb;
-}
-
-void Allocator::popFree(MemoryControlBlock *mcb) noexcept {
-    if (this->firstFree == mcb)
-        this->firstFree = mcb->nextFree();
-    mcb->popFree();
-}
+                                                    ());
 
 std::uintptr_t Allocator::alloc(std::size_t size) {
     return this->allocBlock(size)->data();
 }
 
 MemoryControlBlock *Allocator::allocBlock(std::size_t size) {
-    MemoryControlBlock *mcb = this->searchFit(size);
-    if (mcb == nullptr)
+    auto *mcb = this->freeBlocks.findIf([size](MemoryControlBlock *mcb){
+            return mcb->fits(size);
+        });
+    if (mcb == nullptr) {
         mcb = this->allocChunk(size);
+    }
 
     // if there is a space to prepend padding block
     if (mcb->fits(2 + MemoryControlBlock::spaceNeeded(size))) {
-        mcb = mcb->split(uniform_int_distribution<std::size_t>(
-            1, mcb->size() - MemoryControlBlock::spaceNeeded(size))(
-            Allocator::randomGenerator));
+        mcb = mcb->split(uniform_int_distribution<std::size_t>
+                         (1, mcb->size() - MemoryControlBlock::spaceNeeded(size))
+                         (Allocator::randomGenerator));
     }
 
     // split block to not waste space
     mcb->split(size);
 
-    this->popFree(mcb);
+    this->freeBlocks.pop(mcb);
     mcb->setBusy();
     return mcb;
 }
 
 MemoryControlBlock *Allocator::allocChunk(std::size_t size) {
     std::size_t spaceForEnd = MemoryControlBlock::spaceNeeded(0);
-    std::size_t spaceNeeded =
-        MemoryControlBlock::spaceNeeded(size) + spaceForEnd;
+    std::size_t spaceNeeded = MemoryControlBlock::spaceNeeded(size) + spaceForEnd;
     std::size_t totalSize = math::roundUp(spaceNeeded, system::PAGE_SIZE());
 
     auto *mcb = reinterpret_cast<MemoryControlBlock *>(system::mmap(totalSize));
     mcb->setSize(totalSize - sizeof(MemoryControlBlock) - spaceForEnd);
-    this->prependFree(mcb);
+    this->freeBlocks.prepend(mcb);
+
     MemoryControlBlock *end = mcb->next();
     end->setPrev(mcb);
     end->makeEndOfChunk();
+
     return mcb;
 }
 
-
-std::size_t Allocator::randomShift(MemoryControlBlock* mcb, std::size_t alignment, std::size_t needed_size) const noexcept
-{
+std::size_t Allocator::randomShift(MemoryControlBlock *mcb,
+                                   std::size_t alignment,
+                                   std::size_t needed_size) const noexcept {
     std::size_t min_shift = mcb->minNeededShift(alignment);
     std::size_t max_shift = mcb->maxPossibleShift(alignment, needed_size);
-    if(max_shift < min_shift)
+    if (max_shift < min_shift)
         return 0;
 
-    std::size_t random_block = uniform_int_distribution<std::size_t>
-            (0, (max_shift - min_shift)/alignment)
-            (Allocator::randomGenerator);
+    std::size_t random_block = uniform_int_distribution<std::size_t>(
+        0, (max_shift - min_shift) / alignment)(Allocator::randomGenerator);
 
     return min_shift + alignment * random_block;
 }
 
-std::uintptr_t Allocator::aligned_alloc(std::size_t alignment, std::size_t size)
-{
+std::uintptr_t Allocator::aligned_alloc(std::size_t alignment,
+                                        std::size_t size) {
     MemoryControlBlock *mcb;
     std::size_t min_shift;
-    for (mcb = this->firstFree, min_shift = mcb->minNeededShift(alignment);
+    for (mcb = this->freeBlocks.first, min_shift = mcb->minNeededShift(alignment);
          mcb != nullptr;
-         mcb = mcb->nextFree(), min_shift  = mcb->minNeededShift(alignment))
-    {
+         mcb = mcb->nextFree(), min_shift = mcb->minNeededShift(alignment)) {
         // if it is fits therefore it is highly likely that we can align
-        if (mcb->fits(size + min_shift))
-        {
-            if(mcb->prev()==nullptr)
-            {   // on the first block in chunk we need to check if we can prepend MCB
+        if (mcb->fits(size + min_shift)) {
+            if (mcb->prev() == nullptr) { // on the first block in chunk we need
+                                          // to check if we can prepend MCB
                 // and still be able to be aligned
-                if(MemoryControlBlock::spaceNeeded(1) <= mcb->maxPossibleShift(alignment, size))
-                    mcb = mcb->split(1); // at this point mcb->prev() will not be nullptr
-                else
+                if (MemoryControlBlock::spaceNeeded(1) > mcb->maxPossibleShift(alignment, size)) {
                     continue;
+                }
+                mcb = mcb->split(1); // at this point mcb->prev() will not be nullptr
+                break;
             }
-            //if it is not the first block therefore we can align
-            break;
         }
-
     }
 
-    if(mcb==nullptr)
-    {
-        mcb = this->allocChunk(size+alignment+MemoryControlBlock::spaceNeeded(1));
+    if (mcb == nullptr) {
+        mcb = this->allocChunk(size + alignment +
+                               MemoryControlBlock::spaceNeeded(1));
         mcb = mcb->split(1);
     }
 
@@ -129,33 +109,34 @@ std::uintptr_t Allocator::aligned_alloc(std::size_t alignment, std::size_t size)
     mcb = mcb->shiftForward(shift);
     mcb->popFree();
     return mcb->data();
-
 }
 
 std::uintptr_t Allocator::realloc(std::uintptr_t ptr, std::size_t size) {
     // realloc(nullptr, size) is equal to alloc(size)
-    if (ptr == reinterpret_cast<std::uintptr_t>(nullptr))
+    if (ptr == reinterpret_cast<std::uintptr_t>(nullptr)) {
         return this->alloc(size);
-    return this->realloc(MemoryControlBlock::fromPtr(ptr), size)->data();
+    }
+    return this->realloc(MemoryControlBlock::fromDataPtr(ptr), size)->data();
 }
 
 void Allocator::free(std::uintptr_t ptr) {
-    this->freeBlock(MemoryControlBlock::fromPtr(ptr));
+    this->freeBlock(MemoryControlBlock::fromDataPtr(ptr));
 }
 
 void Allocator::freeBlock(MemoryControlBlock *mcb) {
     mcb->setFree();
-    this->prependFree(mcb);
+    this->freeBlocks.prepend(mcb);
 
-    if (MemoryControlBlock *next = mcb->next(); next && !next->busy()) {
-        if (this->firstFree == next)
-            this->firstFree = next->nextFree();
+    if (MemoryControlBlock *next = mcb->next(); !next->busy()) {
+        if (this->freeBlocks.first == next) {
+            this->freeBlocks.first = next->nextFree();
+        }
         mcb->absorbNext();
     }
 
-    if (MemoryControlBlock *prev = mcb->prev(); prev && !prev->busy()) {
-        if (this->firstFree == mcb)
-            this->firstFree = mcb->nextFree();
+    if (MemoryControlBlock *prev = mcb->prev(); prev != nullptr && !prev->busy()) {
+        if (this->freeBlocks.first == mcb)
+            this->freeBlocks.first = mcb->nextFree();
         prev->absorbNext();
         mcb = prev;
     }
@@ -203,12 +184,12 @@ void Allocator::tryUnmap(MemoryControlBlock *mcb) {
         } else {
             // there is no space in current page
             mcb->makeEndOfChunk();
-            this->popFree(mcb);
+            this->freeBlocks.pop(mcb);
         }
-    } else {
-        // block was removed with pages
-        if (this->firstFree == mcb)
-            this->firstFree = mcbStored.nextFree();
+    } else { // block was removed with pages
+        if (this->freeBlocks.first == mcb) {
+            this->freeBlocks.first = mcbStored.nextFree();
+        }
         mcbStored.popFree();
     }
 
@@ -224,7 +205,7 @@ void Allocator::tryUnmap(MemoryControlBlock *mcb) {
                            MemoryControlBlock::spaceNeeded(0));
             first->makeFirstInChunk();
             next->setPrev(first);
-            this->prependFree(first);
+            this->freeBlocks.prepend(first);
         } else
             // there is no space before next
             next->makeFirstInChunk();
@@ -232,8 +213,7 @@ void Allocator::tryUnmap(MemoryControlBlock *mcb) {
 }
 
 MemoryControlBlock *Allocator::realloc(MemoryControlBlock *mcb,
-                                       std::size_t size)
-{
+                                       std::size_t size) {
     if (mcb->fits(size)) {
         mcb->split(size);
         return mcb;
@@ -251,8 +231,8 @@ MemoryControlBlock *Allocator::realloc(MemoryControlBlock *mcb,
     auto *oldMCB = mcb;
     mcb = this->allocBlock(size);
     std::copy(
-        reinterpret_cast<unsigned short *>(oldMCB->data()),
-        reinterpret_cast<unsigned short *>(oldMCB->data() + oldMCB->size()),
+        reinterpret_cast<std::uint16_t *>(oldMCB->data()),
+        reinterpret_cast<std::uint16_t *>(oldMCB->data() + oldMCB->size()),
         mcb);
     this->freeBlock(oldMCB);
     return mcb;

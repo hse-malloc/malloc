@@ -3,9 +3,9 @@
 
 #include <cstddef>
 #include <cstdint>
-//#include <cstring>
 
 namespace hse::memory {
+
 MemoryControlBlock::MemoryControlBlock(std::size_t size,
                                        MemoryControlBlock *prev,
                                        MemoryControlBlock *prevFree,
@@ -16,7 +16,7 @@ MemoryControlBlock::MemoryControlBlock(std::size_t size,
     this->setNextFree(nextFree);
 }
 
-MemoryControlBlock *MemoryControlBlock::fromPtr(std::uintptr_t ptr) noexcept {
+MemoryControlBlock *MemoryControlBlock::fromDataPtr(std::uintptr_t ptr) noexcept {
     return reinterpret_cast<MemoryControlBlock *>(ptr) - 1;
 }
 
@@ -98,9 +98,10 @@ void MemoryControlBlock::absorbNext() noexcept {
 }
 
 void MemoryControlBlock::setPrevFree(MemoryControlBlock *prevFree) noexcept {
-    if ((this->prevFree_ = prevFree) != nullptr) {
-        prevFree->nextFree_ = this;
+    if ((this->prevFree_ = prevFree) == nullptr) {
+        return;
     }
+    prevFree->nextFree_ = this;
 }
 
 MemoryControlBlock *MemoryControlBlock::nextFree() const noexcept {
@@ -108,22 +109,29 @@ MemoryControlBlock *MemoryControlBlock::nextFree() const noexcept {
 }
 
 void MemoryControlBlock::setNextFree(MemoryControlBlock *nextFree) noexcept {
-    if ((this->nextFree_ = nextFree))
-        nextFree->prevFree_ = this;
+    if ((this->nextFree_ = nextFree) == nullptr) {
+        return;
+    }
+    nextFree->prevFree_ = this;
 }
 
 void MemoryControlBlock::popFree() noexcept {
-    if (this->prevFree_)
+    if (this->prevFree_ != nullptr) {
         this->prevFree_->setNextFree(this->nextFree());
-    else if (MemoryControlBlock *nextFree = this->nextFree(); nextFree)
+    } else if (auto *nextFree = this->nextFree(); nextFree != nullptr) {
         nextFree->setPrevFree(this->prevFree_);
+    }
     this->setPrevFree(nullptr);
     this->setNextFree(nullptr);
 }
 
-bool MemoryControlBlock::firstInChunk() const noexcept { return !this->prev(); }
+bool MemoryControlBlock::firstInChunk() const noexcept {
+    return this->prev() == nullptr;
+}
 
-void MemoryControlBlock::makeFirstInChunk() noexcept { this->setPrev(nullptr); }
+void MemoryControlBlock::makeFirstInChunk() noexcept {
+    this->setPrev(nullptr);
+}
 
 bool MemoryControlBlock::endOfChunk() const noexcept {
     return this->busy() && this->size() == 0;
@@ -135,29 +143,35 @@ void MemoryControlBlock::makeEndOfChunk() noexcept {
     this->popFree();
 }
 
-bool MemoryControlBlock::isAligned(std::size_t aligment) const noexcept { return (aligment==0? false : this->data() % aligment); }
-
-std::size_t MemoryControlBlock::minNeededShift(std::size_t alignment) const noexcept
-{
-    return (this->isAligned(alignment)? 0:(alignment - (this->data()%alignment)));
+bool MemoryControlBlock::isAligned(std::size_t aligment) const noexcept {
+    return (aligment == 0 ? false : this->data() % aligment);
 }
 
-std::size_t MemoryControlBlock::maxPossibleShift(std::size_t alignment, std::size_t needed_size) const noexcept
-{
+std::size_t
+MemoryControlBlock::minNeededShift(std::size_t alignment) const noexcept {
+    return (this->isAligned(alignment)
+                ? 0
+                : (alignment - (this->data() % alignment)));
+}
+
+std::size_t
+MemoryControlBlock::maxPossibleShift(std::size_t alignment,
+                                     std::size_t needed_size) const noexcept {
     std::size_t max_shift = this->minNeededShift(alignment);
-    if(needed_size + max_shift > this->size()) // it is not possible
+    if (needed_size + max_shift > this->size()) // it is not possible
         return 0;
     std::size_t remainded_space = this->size() - needed_size - max_shift;
-    return (remainded_space /alignment) * alignment + max_shift;
+    return (remainded_space / alignment) * alignment + max_shift;
 }
 
-MemoryControlBlock* MemoryControlBlock::shiftForward(std::size_t size) noexcept
-{
-    if(this->busy() || this->prev()==nullptr || size == 0)
+MemoryControlBlock *
+MemoryControlBlock::shiftForward(std::size_t size) noexcept {
+    if (this->busy() || this->prev() == nullptr || size == 0)
         return this;
 
     size = math::roundUp<std::size_t>(size, 2);
-    auto* new_mcb = reinterpret_cast<MemoryControlBlock*>(reinterpret_cast<std::uintptr_t>(this+size));
+    auto *new_mcb = reinterpret_cast<MemoryControlBlock *>(
+        reinterpret_cast<std::uintptr_t>(this + size));
 
     this->prev()->grow(size);
     this->next()->setPrev(new_mcb);

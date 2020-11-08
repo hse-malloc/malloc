@@ -2,6 +2,7 @@
 #define ALLOCATOR_H
 
 #include "memory_control_block.h"
+#include "memory_control_block_list.h"
 #include "random/random.h"
 
 #include <cstddef>
@@ -13,22 +14,9 @@ namespace hse::memory {
 class Allocator {
   private:
     // PRNG generator which is used in every call to random value
-    static thread_local sc69069_t randomGenerator;
+    static sc69069_t randomGenerator;
 
-    // firstFree is a pointer to first block in chain of free blocks
-    MemoryControlBlock *firstFree;
-
-    // prependFree prepends given block to start of chain of free blocks
-    void prependFree(MemoryControlBlock *) noexcept;
-
-    // searchFit returns first block in chain of free blocks
-    // which fits given size
-    // It returns nullptr if there is no such block
-    MemoryControlBlock *searchFit(std::size_t) const noexcept;
-
-    // popFree extracts given block from chain of free blocks
-    // and moves firstFree if needed
-    void popFree(MemoryControlBlock *) noexcept;
+    FreeMemoryControlBlockList freeBlocks;
 
     // allocBlock returns block from chain of free blocks
     // or allocates memory for new one if needed
@@ -53,10 +41,10 @@ class Allocator {
     // tryUnmap tries to unmap memory pages within given block
     void tryUnmap(MemoryControlBlock *);
 
-    // returns the random shift for given MCB to store provided size and to be alinged
-    // from min possible value to max possible value
-    // returns zero if it is not possible
-    std::size_t randomShift(MemoryControlBlock*, std::size_t, std::size_t) const noexcept;
+    // returns the random shift for given MCB to store provided size and to be
+    // alinged from min possible value to max possible value returns zero if it
+    // is not possible
+    std::size_t randomShift(MemoryControlBlock *, std::size_t, std::size_t) const noexcept;
 
   public:
     // alloc(size) allocates memory size bytes and returns a pointer to the
