@@ -28,17 +28,12 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 		include/malloc.h
 )
 
-include(CheckCXXSourceCompiles)
-
-check_cxx_source_compiles("int main(){return __builtin_popcountll(1) ;}" HAVE_DEV_URANDOM)
-check_cxx_source_compiles(
-    "#include <random>
-     int main() { std::random_device(\"/dev/urandom\");}"
-     HAVE_DEV_URANDOM)
 
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE "$<$<CONFIG:DEBUG>:HSE_MALLOC_DEBUG>"
-    PRIVATE "$<$<BOOL:HAVE_DEV_URANDOM>:HAVE_DEV_URANDOM>")
+    PRIVATE "$<$<PLATFORM_ID:Linux, Darwin>:HAVE_DEV_URANDOM>"
+    PRIVATE "$<$<PLATFORM_ID:Linux, Darwin>:HAVE_MMAP>"
+    PRIVATE "$<$<PLATFORM_ID:Windows>:HAVE_VIRTUAL_ALLOC>")
 
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
@@ -56,7 +51,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 		-Wpedantic
         >
         PUBLIC
-        $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:
         	$<$<CONFIG:DEBUG>:
         		-fprofile-instr-generate
         		-fcoverage-mapping
@@ -65,7 +60,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
         )
 
 target_link_options(${PROJECT_NAME} PUBLIC
-        $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:
         	$<$<CONFIG:DEBUG>:
         		-fprofile-instr-generate
         		-fcoverage-mapping

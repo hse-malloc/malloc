@@ -14,7 +14,7 @@ target_compile_options(malloc_test PRIVATE
                 -Wpedantic
         >
         PUBLIC
-        $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:
         	$<$<CONFIG:DEBUG>:
         		-fprofile-instr-generate
         		-fcoverage-mapping
