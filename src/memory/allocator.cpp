@@ -122,7 +122,6 @@ MemoryControlBlock *Allocator::allocChunk(std::size_t size) {
 }
 
 MemoryControlBlock* Allocator::findFitDataAligned(std::size_t size, std::size_t alignment) noexcept {
-    // TODO: check if alignment is multiple of 2
     auto minWasteShift = std::numeric_limits<std::size_t>::max();
     MemoryControlBlock *mcbWithMinWasteShift = nullptr;
 
@@ -144,7 +143,6 @@ MemoryControlBlock* Allocator::findFitDataAligned(std::size_t size, std::size_t 
 
         if (shift >= sizeof(MemoryControlBlock) + 2) {
             // shift is large enough to add block before shifted one
-            // TODO: split rounds up size, we do not need it?
             return mcb->split(shift - sizeof(MemoryControlBlock));
         }
 
