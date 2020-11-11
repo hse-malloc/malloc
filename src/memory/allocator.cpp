@@ -32,6 +32,10 @@ std::uintptr_t Allocator::alloc(std::size_t size) {
     return this->allocBlock(size)->data();
 }
 
+std::uintptr_t Allocator::alloc(std::size_t size, std::size_t alignment) {
+    return this->allocBlock(size, alignment)->data();
+}
+
 MemoryControlBlock *Allocator::allocBlock(std::size_t size) {
     auto *mcb = this->freeBlocks.findPred(mcbFits(size));
     if (mcb == nullptr) {
@@ -47,26 +51,28 @@ MemoryControlBlock *Allocator::allocBlock(std::size_t size) {
 
     // split block to not waste space
     mcb->split(size);
-
     this->freeBlocks.pop(mcb);
     mcb->setBusy();
     return mcb;
 }
 
-
-std::uintptr_t Allocator::alignedAlloc(std::size_t size, std::size_t alignment) {
-    return this->allocBlockAligned(size, alignment)->data();
-}
-
-MemoryControlBlock* Allocator::allocBlockAligned(std::size_t size, std::size_t alignment) {
+MemoryControlBlock* Allocator::allocBlock(std::size_t size, std::size_t alignment) {
     auto *mcb = this->findFitDataAligned(size, alignment);
     if (mcb == nullptr) {
         mcb = this->allocChunk(size + alignment);
 
         auto data = mcb->data();
         auto shift = math::roundUp(data, alignment) - data;
-        this->shiftBlockForward(mcb, shift);
+        mcb = this->shiftForward(mcb, shift);
     }
+
+    if (mcb->fits(math::roundUp(sizeof(MemoryControlBlock), alignment) + size)) {
+        auto timesAlignment = uniform_int_distribution<std::size_t>
+            (0, (mcb->size() - size) / alignment)
+            (Allocator::randomGenerator);
+        mcb = this->shiftForward(mcb, timesAlignment * alignment);
+    }
+
     mcb->split(size);
     this->freeBlocks.pop(mcb);
     mcb->setBusy();
@@ -141,7 +147,7 @@ MemoryControlBlock* Allocator::findFitDataAligned(std::size_t size, std::size_t 
         // at this point, current mcb should be shifted
         // to meet the alignment requirement
 
-        if (shift >= sizeof(MemoryControlBlock) + 2) {
+        if (shift >= MemoryControlBlock::spaceNeeded(1)) {
             // shift is large enough to add block before shifted one
             return mcb->split(shift - sizeof(MemoryControlBlock));
         }
@@ -159,18 +165,24 @@ MemoryControlBlock* Allocator::findFitDataAligned(std::size_t size, std::size_t 
         return nullptr;
     }
 
-    this->shiftBlockForward(mcbWithMinWasteShift, minWasteShift);
-
-    return mcbWithMinWasteShift;
+    return this->shiftForward(mcbWithMinWasteShift, minWasteShift);
 }
 
-void Allocator::shiftBlockForward(MemoryControlBlock* &mcb, std::size_t shift) noexcept {
+MemoryControlBlock* Allocator::shiftForward(MemoryControlBlock *mcb, std::size_t shift) noexcept {
     if (shift == 0) {
-        return;
+        return mcb;
     }
+    if (shift >= MemoryControlBlock::spaceNeeded(1)) {
+        return mcb->split(shift - sizeof(MemoryControlBlock));
+    }
+
     auto storedMCB = *mcb;
     auto *shiftedMCB = reinterpret_cast<MemoryControlBlock*>(
            reinterpret_cast<std::uint8_t*>(mcb) + shift);
+
+    if (this->freeBlocks.first == mcb) {
+        this->freeBlocks.first = shiftedMCB;
+    }
 
     mcb->next()->setPrev(shiftedMCB);
     if (!mcb->firstInChunk()) {
@@ -180,10 +192,7 @@ void Allocator::shiftBlockForward(MemoryControlBlock* &mcb, std::size_t shift) n
     shiftedMCB->setNextFree(storedMCB.nextFree());
     shiftedMCB->setSize(storedMCB.size() - shift);
 
-    if (this->freeBlocks.first == mcb) {
-        this->freeBlocks.first = shiftedMCB;
-    }
-    mcb = shiftedMCB;
+    return shiftedMCB;
 }
 
 void Allocator::free(std::uintptr_t ptr) {

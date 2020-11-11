@@ -47,6 +47,9 @@ bool MemoryControlBlock::fits(std::size_t size) const noexcept {
 }
 
 MemoryControlBlock *MemoryControlBlock::split(std::size_t size) noexcept {
+    if (size == 0) {
+        return this;
+    }
     size = math::roundUp<std::size_t>(size, 2);
     if (!this->fits(size + MemoryControlBlock::spaceNeeded(1))) {
         return this;
@@ -66,6 +69,10 @@ MemoryControlBlock *MemoryControlBlock::split(std::size_t size) noexcept {
     return next;
 }
 
+MemoryControlBlock* MemoryControlBlock::rsplit(std::size_t size) noexcept {
+    size = math::roundUp<std::size_t>(size, 2);
+    return this->split(this->size() - size - sizeof(MemoryControlBlock));
+}
 
 bool MemoryControlBlock::busy() const noexcept {
     return math::nthBit(this->size_, 0);

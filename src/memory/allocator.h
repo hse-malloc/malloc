@@ -18,11 +18,13 @@ class Allocator {
 
     FreeMemoryControlBlockList freeBlocks;
 
-    // allocBlock returns block from chain of free blocks
-    // or allocates memory for new one if needed
-    MemoryControlBlock *allocBlock(std::size_t);
+    // allocBlock returns block with given size from chain of free blocks
+    // or allocates memory for new one if needed.
+    MemoryControlBlock* allocBlock(std::size_t size);
 
-    MemoryControlBlock* allocBlockAligned(std::size_t size, std::size_t alignment);
+    // allockBlock(size, alignment) is the same as allocBlock(size),
+    // but returned block data is aligned by given alignment
+    MemoryControlBlock* allocBlock(std::size_t size, std::size_t alignment);
 
     // realloc(mcb, size) tries to enlarge size of given mcb to given size.
     // If size is less than or equal to current size of mcb,
@@ -38,7 +40,7 @@ class Allocator {
     void freeBlock(MemoryControlBlock *);
 
     // allocChunk allocates memory pages for new block with given size
-    MemoryControlBlock *allocChunk(std::size_t size);
+    [[nodiscard]] MemoryControlBlock *allocChunk(std::size_t size);
 
     // findFitDataAligned returns block which fits given size
     // and data is aligned by given alignment.
@@ -46,10 +48,13 @@ class Allocator {
     MemoryControlBlock *findFitDataAligned(std::size_t size, std::size_t alignment) noexcept;
 
     // shiftForward shifts given MCB forward
+    // and prepends it with another non-empty MCB if possible.
+    // It returns pointer to shifted one.
     // Following conditions should be met:
     // 1. mcb should not be busy
-    // 2. mcb->fits(shift + 2)
-    void shiftBlockForward(MemoryControlBlock* &mcb, std::size_t shift) noexcept;
+    // 2. shift should be multiple of 2
+    // 3. mcb->fits(shift + 2)
+    [[nodiscard]] MemoryControlBlock* shiftForward(MemoryControlBlock* mcb, std::size_t shift) noexcept;
 
     // tryUnmap tries to unmap memory pages within given block
     void tryUnmap(MemoryControlBlock *);
@@ -57,7 +62,11 @@ class Allocator {
   public:
     // alloc(size) allocates memory size bytes and returns a pointer to the
     // allocated memory
-    std::uintptr_t alloc(std::size_t);
+    [[nodiscard]] std::uintptr_t alloc(std::size_t);
+
+    // alloc(size, alignment) allocates memory of size bytes with specified
+    // aligment and returns a pointer to the allocated memory
+    [[nodiscard]] std::uintptr_t alloc(std::size_t size, std::size_t alignment);
 
     // realloc(ptr, size) reallocates memory pointed by ptr for given size and
     // returns ptr. If size is less than or equal to current size of allocated
@@ -65,11 +74,7 @@ class Allocator {
     // enlarge memory allocation pointed by ptr, it allocates new allocation,
     // copies the old data pointed to by ptr, frees the old allocation and
     // returns a pointer to allocated memory.
-    std::uintptr_t realloc(std::uintptr_t, std::size_t);
-
-    // aligned_alloc(size, alignment) allocates memory size bytes with specified
-    // aligment and returns a pointer to the allocated memory
-    std::uintptr_t alignedAlloc(std::size_t, std::size_t);
+    [[nodiscard]] std::uintptr_t realloc(std::uintptr_t, std::size_t);
 
     // free deallocates memory pointed by given pointer
     void free(std::uintptr_t);

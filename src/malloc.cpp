@@ -89,7 +89,7 @@ void *aligned_alloc(size_t alignment, size_t size) noexcept {
     }
 
     try {
-        return reinterpret_cast<void *>(_allocator.alignedAlloc(size, alignment));
+        return reinterpret_cast<void *>(_allocator.alloc(size, alignment));
     } catch (...) {
         return nullptr;
     }
@@ -114,7 +114,7 @@ void *operator new(std::size_t size, std::align_val_t al) {
     DEBUG_LOG("NEW");
     try {
         return reinterpret_cast<void *>(
-            std::_allocator.alignedAlloc(size, static_cast<std::size_t>(al)));
+            std::_allocator.alloc(size, static_cast<std::size_t>(al)));
     } catch (...) {
         throw std::bad_alloc{};
     }

@@ -64,6 +64,10 @@ class MemoryControlBlock {
     // or pointer to itself otherwise
     MemoryControlBlock* split(std::size_t) noexcept;
 
+    // rsplit is the same as split, but it makes second (right)
+    // block to be of given size
+    MemoryControlBlock* rsplit(std::size_t) noexcept;
+
     // busy returns if the block is marked as busy
     bool busy() const noexcept;
 
