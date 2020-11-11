@@ -24,21 +24,6 @@ class Allocator {
 
     MemoryControlBlock* allocBlockAligned(std::size_t size, std::size_t alignment);
 
-    // allocChunk allocates memory pages for new block with given size
-    MemoryControlBlock *allocChunk(std::size_t);
-
-    // shiftForward shifts given MCB forward.
-    // Following conditions should be met:
-    // 1. shift should be positive,
-    // 2. mcb should not be busy,
-    // 3. mcb->fits(shift + 2)
-    void shiftBlockForward(MemoryControlBlock* &mcb, std::size_t shift) noexcept;
-
-    // findFitDataAligned returns block which fits given size
-    // and data is aligned by given alignment.
-    // It returns nullptr if there is no such block
-    MemoryControlBlock *findFitDataAligned(std::size_t size, std::size_t alignment);
-
     // realloc(mcb, size) tries to enlarge size of given mcb to given size.
     // If size is less than or equal to current size of mcb,
     // then it shrinks it.
@@ -51,6 +36,20 @@ class Allocator {
     // merges it with its neighbors and unmaps free memory pages
     // within given block
     void freeBlock(MemoryControlBlock *);
+
+    // allocChunk allocates memory pages for new block with given size
+    MemoryControlBlock *allocChunk(std::size_t size);
+
+    // findFitDataAligned returns block which fits given size
+    // and data is aligned by given alignment.
+    // It returns nullptr if there is no such block
+    MemoryControlBlock *findFitDataAligned(std::size_t size, std::size_t alignment) noexcept;
+
+    // shiftForward shifts given MCB forward
+    // Following conditions should be met:
+    // 1. mcb should not be busy
+    // 2. mcb->fits(shift + 2)
+    void shiftBlockForward(MemoryControlBlock* &mcb, std::size_t shift) noexcept;
 
     // tryUnmap tries to unmap memory pages within given block
     void tryUnmap(MemoryControlBlock *);

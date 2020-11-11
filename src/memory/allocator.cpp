@@ -58,11 +58,14 @@ std::uintptr_t Allocator::alignedAlloc(std::size_t size, std::size_t alignment) 
     return this->allocBlockAligned(size, alignment)->data();
 }
 
-
 MemoryControlBlock* Allocator::allocBlockAligned(std::size_t size, std::size_t alignment) {
     auto *mcb = this->findFitDataAligned(size, alignment);
     if (mcb == nullptr) {
-        // TODO: alloc chunk and split block
+        mcb = this->allocChunk(size + alignment);
+
+        auto data = mcb->data();
+        auto shift = math::roundUp(data, alignment) - data;
+        this->shiftBlockForward(mcb, shift);
     }
     mcb->split(size);
     this->freeBlocks.pop(mcb);
@@ -118,7 +121,7 @@ MemoryControlBlock *Allocator::allocChunk(std::size_t size) {
     return mcb;
 }
 
-MemoryControlBlock* Allocator::findFitDataAligned(std::size_t size, std::size_t alignment) {
+MemoryControlBlock* Allocator::findFitDataAligned(std::size_t size, std::size_t alignment) noexcept {
     // TODO: check if alignment is multiple of 2
     auto minWasteShift = std::numeric_limits<std::size_t>::max();
     MemoryControlBlock *mcbWithMinWasteShift = nullptr;
@@ -164,6 +167,9 @@ MemoryControlBlock* Allocator::findFitDataAligned(std::size_t size, std::size_t 
 }
 
 void Allocator::shiftBlockForward(MemoryControlBlock* &mcb, std::size_t shift) noexcept {
+    if (shift == 0) {
+        return;
+    }
     auto storedMCB = *mcb;
     auto *shiftedMCB = reinterpret_cast<MemoryControlBlock*>(
            reinterpret_cast<std::uint8_t*>(mcb) + shift);
