@@ -22,8 +22,22 @@ class Allocator {
     // or allocates memory for new one if needed
     MemoryControlBlock *allocBlock(std::size_t);
 
+    MemoryControlBlock* allocBlockAligned(std::size_t size, std::size_t alignment);
+
     // allocChunk allocates memory pages for new block with given size
     MemoryControlBlock *allocChunk(std::size_t);
+
+    // shiftForward shifts given MCB forward.
+    // Following conditions should be met:
+    // 1. shift should be positive,
+    // 2. mcb should not be busy,
+    // 3. mcb->fits(shift + 2)
+    void shiftBlockForward(MemoryControlBlock* &mcb, std::size_t shift) noexcept;
+
+    // findFitDataAligned returns block which fits given size
+    // and data is aligned by given alignment.
+    // It returns nullptr if there is no such block
+    MemoryControlBlock *findFitDataAligned(std::size_t size, std::size_t alignment);
 
     // realloc(mcb, size) tries to enlarge size of given mcb to given size.
     // If size is less than or equal to current size of mcb,
@@ -31,7 +45,7 @@ class Allocator {
     // If there is not enough room to enlarge size of given mcb,
     // it allocates new MemoryControlBlock, copies the data from given mcb,
     // frees the old mcb and returns a pointer to allocated MemoryControlBlock.
-    MemoryControlBlock *realloc(MemoryControlBlock *, std::size_t);
+    MemoryControlBlock *reallocBlock(MemoryControlBlock *, std::size_t);
 
     // freeBlock releases block back to chain of blocks,
     // merges it with its neighbors and unmaps free memory pages
@@ -40,11 +54,6 @@ class Allocator {
 
     // tryUnmap tries to unmap memory pages within given block
     void tryUnmap(MemoryControlBlock *);
-
-    // returns the random shift for given MCB to store provided size and to be
-    // alinged from min possible value to max possible value returns zero if it
-    // is not possible
-    std::size_t randomShift(MemoryControlBlock *, std::size_t, std::size_t) const noexcept;
 
   public:
     // alloc(size) allocates memory size bytes and returns a pointer to the
@@ -59,9 +68,9 @@ class Allocator {
     // returns a pointer to allocated memory.
     std::uintptr_t realloc(std::uintptr_t, std::size_t);
 
-    // aligned_alloc(aligment, size) allocates memory size bytes with specified
+    // aligned_alloc(size, alignment) allocates memory size bytes with specified
     // aligment and returns a pointer to the allocated memory
-    std::uintptr_t aligned_alloc(std::size_t, std::size_t);
+    std::uintptr_t alignedAlloc(std::size_t, std::size_t);
 
     // free deallocates memory pointed by given pointer
     void free(std::uintptr_t);

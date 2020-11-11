@@ -2,8 +2,42 @@
 #define MEMORY_CONTROL_BLOCK_LIST_H
 
 #include "memory_control_block.h"
+#include "math/math.h"
+
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <utility>
+#include <type_traits>
 
 namespace hse::memory {
+
+template<typename T>
+concept MCBPredicate = std::is_nothrow_invocable_r_v<bool, T, const MemoryControlBlock*>;
+
+template<MCBPredicate P>
+MCBPredicate auto operator!(P p) {
+  return [p](MemoryControlBlock *mcb) noexcept {
+    return !p(mcb);
+  };
+}
+
+template<MCBPredicate P1, MCBPredicate P2>
+MCBPredicate auto operator&&(P1 p1, P2 p2) {
+  return [p1, p2](MemoryControlBlock *mcb) noexcept {
+    return p1(mcb) && p2 (mcb);
+  };
+}
+
+template<MCBPredicate P1, MCBPredicate P2>
+MCBPredicate auto operator||(P1 p1, P2 p2) {
+  return [p1, p2](MemoryControlBlock *mcb) noexcept {
+    return p1(mcb) || p2 (mcb);
+  };
+}
+
+// template<typename T>
+// concept MCBMetric = std::is_nothrow_invocable_r_v<std::size_t, T, const MemoryControlBlock*>;
 
 class FreeMemoryControlBlockList {
   public:
@@ -18,17 +52,19 @@ class FreeMemoryControlBlockList {
     // and moves firstFree if needed
     void pop(MemoryControlBlock *) noexcept;
 
-    // findIf returns first block in chain of free blocks
+    // findPred returns first block in chain of free blocks
     // for which pred returns true
     // It returns nullptr if there is no such block
-    template<typename UnaryPredicate>
-    MemoryControlBlock* findIf(UnaryPredicate pred) const noexcept {
-      MemoryControlBlock *mcb;
-      for (mcb = this->first; mcb != nullptr && !pred(mcb); mcb = mcb->nextFree()) {}
-      return mcb;
+    template<MCBPredicate P>
+    MemoryControlBlock* findPred(P pred) const noexcept {
+      for (auto *mcb = this->first; mcb != nullptr; mcb = mcb->nextFree()) {
+        if (pred(mcb)) {
+          return mcb;
+        }
+      }
+      return nullptr;
     }
 
-    // MemoryControlBlock* searchFit(std::size_t size) const noexcept;
 }; // MemoryControlBlockList
 
 } // namespace hse::memory

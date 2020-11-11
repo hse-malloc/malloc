@@ -48,8 +48,9 @@ bool MemoryControlBlock::fits(std::size_t size) const noexcept {
 
 MemoryControlBlock *MemoryControlBlock::split(std::size_t size) noexcept {
     size = math::roundUp<std::size_t>(size, 2);
-    if (!this->fits(size + MemoryControlBlock::spaceNeeded(1)))
+    if (!this->fits(size + MemoryControlBlock::spaceNeeded(1))) {
         return this;
+    }
 
     std::size_t oldSize = this->size();
     this->setSize(size);
@@ -64,6 +65,7 @@ MemoryControlBlock *MemoryControlBlock::split(std::size_t size) noexcept {
     next->setPrevFree(this);
     return next;
 }
+
 
 bool MemoryControlBlock::busy() const noexcept {
     return math::nthBit(this->size_, 0);
@@ -95,6 +97,10 @@ void MemoryControlBlock::absorbNext() noexcept {
     next->popFree();
     next->next()->setPrev(this);
     this->grow(sizeof(MemoryControlBlock) + next->size());
+}
+
+MemoryControlBlock* MemoryControlBlock::prevFree() const noexcept {
+    return this->prevFree_;
 }
 
 void MemoryControlBlock::setPrevFree(MemoryControlBlock *prevFree) noexcept {
@@ -141,45 +147,6 @@ void MemoryControlBlock::makeEndOfChunk() noexcept {
     this->setBusy();
     this->setSize(0);
     this->popFree();
-}
-
-bool MemoryControlBlock::isAligned(std::size_t aligment) const noexcept {
-    return (aligment == 0 ? false : this->data() % aligment);
-}
-
-std::size_t
-MemoryControlBlock::minNeededShift(std::size_t alignment) const noexcept {
-    return (this->isAligned(alignment)
-                ? 0
-                : (alignment - (this->data() % alignment)));
-}
-
-std::size_t
-MemoryControlBlock::maxPossibleShift(std::size_t alignment,
-                                     std::size_t needed_size) const noexcept {
-    std::size_t max_shift = this->minNeededShift(alignment);
-    if (needed_size + max_shift > this->size()) // it is not possible
-        return 0;
-    std::size_t remainded_space = this->size() - needed_size - max_shift;
-    return (remainded_space / alignment) * alignment + max_shift;
-}
-
-MemoryControlBlock *
-MemoryControlBlock::shiftForward(std::size_t size) noexcept {
-    if (this->busy() || this->prev() == nullptr || size == 0)
-        return this;
-
-    size = math::roundUp<std::size_t>(size, 2);
-    auto *new_mcb = reinterpret_cast<MemoryControlBlock *>(
-        reinterpret_cast<std::uintptr_t>(this + size));
-
-    this->prev()->grow(size);
-    this->next()->setPrev(new_mcb);
-
-    new_mcb->setPrevFree(this->prevFree_);
-    new_mcb->setNextFree(this->nextFree_);
-    new_mcb->size_ = this->size_;
-    return new_mcb;
 }
 
 } // namespace hse::memory

@@ -1,2 +1,4 @@
-Checks: '*'
+Checks:
+  - '*'
+  - '-llvmlibc-*'
 FormatStyle: 'file'

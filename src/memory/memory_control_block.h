@@ -29,11 +29,6 @@ class MemoryControlBlock {
     // If it is nullptr then there is no previous free block and this block is
     // the first in chain of free blocks
     MemoryControlBlock *nextFree_;
-
-    // setPrevFree sets previous free block in chain of free blocks
-    // and sets its next free block to current
-    void setPrevFree(MemoryControlBlock *) noexcept;
-
   public:
     MemoryControlBlock(std::size_t size = 0, MemoryControlBlock *prev = nullptr,
                        MemoryControlBlock *prevFree = nullptr,
@@ -65,9 +60,9 @@ class MemoryControlBlock {
 
     // split tries to split the block into two blocks,
     // where first of them has given size.
-    // It returns pointer to next block in case of split,
+    // It returns pointer to second block in case of split,
     // or pointer to itself otherwise
-    MemoryControlBlock *split(std::size_t) noexcept;
+    MemoryControlBlock* split(std::size_t) noexcept;
 
     // busy returns if the block is marked as busy
     bool busy() const noexcept;
@@ -94,6 +89,14 @@ class MemoryControlBlock {
     // and absorbs it
     void absorbNext() noexcept;
 
+    // prevFree returns a pointer to previous free block in chain of free blocks.
+    // If it is nullptr then this is the first block in the chain
+    MemoryControlBlock *prevFree() const noexcept;
+
+    // setPrevFree sets previous free block in chain of free blocks
+    // and sets its next free block to current
+    void setPrevFree(MemoryControlBlock *) noexcept;
+
     // nextFree returns a pointer to next free block in chain of free blocks
     // If it is nullptr then this is the last block in the chain.
     MemoryControlBlock *nextFree() const noexcept;
@@ -117,24 +120,8 @@ class MemoryControlBlock {
 
     // makeEndOfChunk marks block as end of chunk
     void makeEndOfChunk() noexcept;
-
-    // return true if mcb is aligned by provided argument
-    // zero aligment is always false
-    bool isAligned(std::size_t) const noexcept;
-
-    // returns the minimum needed shift for current block to be aligned
-    std::size_t minNeededShift(std::size_t) const noexcept;
-
-    // returns the maximum possible shift for current block to store provided
-    // size and to be alinged returns zero if it is not possible
-    std::size_t maxPossibleShift(std::size_t, std::size_t) const noexcept;
-
-    // shifts the current mcb forward if it is free
-    // it is not possible to shift the first MCB
-    // returns the new location of MBC or the old one
-    // if operation was not possible
-    MemoryControlBlock *shiftForward(std::size_t) noexcept;
 };
+
 } // namespace hse::memory
 
 #endif // MEMORY_CONTROL_BLOCK_H
