@@ -21,5 +21,19 @@ target_compile_options(malloc_test PRIVATE
         	>
         >)
 
+find_package(Catch2)
+if(NOT Catch2_FOUND)
+    Include(FetchContent)
 
-add_test(NAME malloc_test COMMAND malloc_test)
+    FetchContent_Declare(
+      Catch2
+      GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+      GIT_TAG        v2.13.1)
+
+    FetchContent_MakeAvailable(Catch2)
+endif()
+
+#add_test(NAME malloc_test COMMAND malloc_test)
+include(CTest)
+include(Catch)
+catch_discover_tests(malloc_test)
