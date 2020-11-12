@@ -6,9 +6,9 @@ project(malloc
 	LANGUAGES CXX
 )
 
-add_library(${PROJECT_NAME}
-	include/malloc.h
-	src/malloc.cpp
+add_library(${PROJECT_NAME}-implementation
+        src/malloc/malloc_implementation.cpp
+        src/malloc/malloc_implementation.h
 	src/system/system.cpp
 	src/system/system.h
 	src/memory/memory_control_block.cpp
@@ -20,6 +20,15 @@ add_library(${PROJECT_NAME}
 	src/random/random.h
 	src/math/math.h
 )
+set_target_properties(${PROJECT_NAME}-implementation PROPERTIES
+    CXX_EXTENSIONS OFF
+    EXPORT_NAME Malloc-implementation)
+
+add_library(${PROJECT_NAME}
+        include/malloc.h
+        src/malloc.cpp
+        )
+
 add_library(Malloc::Malloc ALIAS ${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES
         CXX_EXTENSIONS OFF
@@ -29,26 +38,38 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 
-target_compile_definitions(${PROJECT_NAME}
+target_compile_definitions(${PROJECT_NAME}-implementation
     PRIVATE "$<$<CONFIG:DEBUG>:HSE_MALLOC_DEBUG>"
     PRIVATE "$<$<PLATFORM_ID:Linux, Darwin>:HAVE_DEV_URANDOM>"
     PRIVATE "$<$<PLATFORM_ID:Linux, Darwin>:HAVE_MMAP>"
     PRIVATE "$<$<PLATFORM_ID:Windows>:HAVE_VIRTUAL_ALLOC>")
 
+
+target_include_directories(${PROJECT_NAME}-implementation
+        PUBLIC
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+            $<INSTALL_INTERFACE:include>
+        PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
-		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-		$<INSTALL_INTERFACE:include>
-	PRIVATE
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:include>
+        PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
+target_compile_features(${PROJECT_NAME}-implementation PRIVATE cxx_std_20)
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
-target_compile_options(${PROJECT_NAME} PRIVATE
+
+target_compile_options(${PROJECT_NAME}-implementation PRIVATE
 	$<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
-		-Wall
-		-Wextra
-		-Wpedantic
+#		-Wall
+#		-Wextra
+#		-Wpedantic
         >
         PUBLIC
         $<$<CXX_COMPILER_ID:Clang,AppleClang>:
@@ -59,7 +80,22 @@ target_compile_options(${PROJECT_NAME} PRIVATE
         >
         )
 
-target_link_options(${PROJECT_NAME} PUBLIC
+target_compile_options(${PROJECT_NAME} PRIVATE
+        $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
+#                -Wall
+#                -Wextra
+#                -Wpedantic
+        >
+        PUBLIC
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:
+                $<$<CONFIG:DEBUG>:
+                        -fprofile-instr-generate
+                        -fcoverage-mapping
+                >
+        >
+        )
+
+target_link_options(${PROJECT_NAME}-implementation PUBLIC
         $<$<CXX_COMPILER_ID:Clang,AppleClang>:
         	$<$<CONFIG:DEBUG>:
         		-fprofile-instr-generate
@@ -68,8 +104,20 @@ target_link_options(${PROJECT_NAME} PUBLIC
         >
     )
 
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-implementation)
+
+
+target_link_options(${PROJECT_NAME} PUBLIC
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:
+                $<$<CONFIG:DEBUG>:
+                        -fprofile-instr-generate
+                        -fcoverage-mapping
+                >
+        >
+    )
+
 include(GNUInstallDirs)
-install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}-targets
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}-implementation EXPORT ${PROJECT_NAME}-targets
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
 	LIBRARY       DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE       DESTINATION ${CMAKE_INSTALL_LIBDIR}

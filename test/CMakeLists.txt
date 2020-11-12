@@ -3,9 +3,15 @@ add_executable(malloc_test
 )
 target_compile_features(malloc_test PRIVATE cxx_std_20)
 
-target_link_libraries(malloc_test PRIVATE malloc)
+target_link_libraries(malloc_test PRIVATE malloc-implementation)
 
-set_target_properties(malloc_test PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(malloc_test
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:include>
+        PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
 
 target_compile_options(malloc_test PRIVATE
         $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
@@ -33,7 +39,6 @@ if(NOT Catch2_FOUND)
     FetchContent_MakeAvailable(Catch2)
 endif()
 
-#add_test(NAME malloc_test COMMAND malloc_test)
 include(CTest)
 include(Catch)
 catch_discover_tests(malloc_test)
