@@ -1,6 +1,7 @@
 #ifndef RANDOM_H
 #define RANDOM_H
 
+#include "concepts/numbers.h"
 #include "math/math.h"
 
 #include <chrono>
@@ -10,11 +11,9 @@
 
 namespace hse {
 
-template <typename _IntType = std::uint64_t,
-          typename = std::enable_if<std::is_unsigned<_IntType>::value>,
-          _IntType k1 = 8, _IntType k2 = 69069, _IntType b = 313>
+template <Integral IntType = std::uint64_t, IntType k1 = 8, IntType k2 = 69069, IntType b = 313>
 class squared_congruential_generator {
-    using result_type = _IntType;
+    using result_type = IntType;
     // init prng value
     result_type __start;
 
@@ -39,24 +38,26 @@ class squared_congruential_generator {
     // min and max possible values
     result_type min() const noexcept { return 0; }
     result_type max() const noexcept {
-        return std::numeric_limits<_IntType>::max();
+        return std::numeric_limits<IntType>::max();
     }
 };
 
-template <typename _IntType = std::uint64_t,
-          typename = std::enable_if<std::is_unsigned<_IntType>::value>>
+template<typename Fn, typename T = std::uint64_t>
+concept PRNG = std::is_nothrow_invocable_r_v<T, Fn>;
+
+template <Integral IntType = std::uint64_t>
 class uniform_int_distribution {
-    _IntType __min;
-    _IntType __max;
+    IntType __min;
+    IntType __max;
 
   public:
-    using result_type = _IntType;
+    using result_type = IntType;
 
     // initialize min and max value of distribution
     // if the _max<=_min then generaor always renturns _min value
     explicit uniform_int_distribution(
-        _IntType _min = 0,
-        _IntType _max = std::numeric_limits<_IntType>::max()) noexcept
+        IntType _min = 0,
+        IntType _max = std::numeric_limits<IntType>::max()) noexcept
         : __min(_min), __max(_min < _max ? _max : _min) {}
 
     // min and max values of generator
@@ -64,8 +65,8 @@ class uniform_int_distribution {
     result_type max() const noexcept { return __max; }
 
     // returning random number from prng
-    template <typename _UniformRandomNumberGenerator>
-    result_type operator()(_UniformRandomNumberGenerator &__prng) noexcept {
+    template <PRNG<result_type> UniformRandomNumberGenerator>
+    result_type operator()(UniformRandomNumberGenerator &__prng) noexcept {
         return min() + __prng() % (max() - min());
     }
 };
@@ -73,7 +74,7 @@ class uniform_int_distribution {
 namespace sch = std::chrono;
 
 // function that converts time_point to int
-template <typename Clock, typename IntType = std::size_t>
+template <typename Clock, Integral IntType = std::size_t>
 IntType timeToInt(sch::time_point<Clock> time) noexcept {
     auto epoch =
         sch::time_point_cast<sch::milliseconds>(time).time_since_epoch();

@@ -1,16 +1,11 @@
 #ifndef MATH_H
 #define MATH_H
 
+#include "concepts/numbers.h"
+
 #include <cstdint>
-#include <type_traits>
 
 namespace hse::math {
-
-template<typename T>
-concept Integral = std::is_integral_v<T>;
-
-template<typename T>
-concept UnsignedIntegral = Integral<T> && std::is_unsigned_v<T>;
 
 template<UnsignedIntegral T>
 constexpr bool isPowerOf2(T x) noexcept {
@@ -54,6 +49,7 @@ template<Integral T>
 constexpr T toogleNthBit(T num, std::uint8_t n) noexcept {
     return num ^ (1 << n);
 }
+
 } // namespace hse::math
 
 #endif // MATH_H

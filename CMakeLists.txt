@@ -7,8 +7,8 @@ project(malloc
 )
 
 add_library(${PROJECT_NAME}-implementation
-        src/malloc/malloc_implementation.cpp
-        src/malloc/malloc_implementation.h
+    src/malloc/malloc_implementation.cpp
+    src/malloc/malloc_implementation.h
 	src/system/system.cpp
 	src/system/system.h
 	src/memory/memory_control_block.cpp
@@ -25,9 +25,9 @@ set_target_properties(${PROJECT_NAME}-implementation PROPERTIES
     EXPORT_NAME Malloc-implementation)
 
 add_library(${PROJECT_NAME}
-        include/malloc.h
-        src/malloc.cpp
-        )
+    include/malloc.h
+    src/malloc.cpp
+)
 
 add_library(Malloc::Malloc ALIAS ${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -46,19 +46,18 @@ target_compile_definitions(${PROJECT_NAME}-implementation
 
 
 target_include_directories(${PROJECT_NAME}-implementation
-        PUBLIC
-        PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-            $<INSTALL_INTERFACE:include>
-        PRIVATE
-                ${CMAKE_CURRENT_SOURCE_DIR}/src
+	PUBLIC
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+		$<INSTALL_INTERFACE:include>
+	PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-            $<INSTALL_INTERFACE:include>
-        PRIVATE
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+		$<INSTALL_INTERFACE:include>
+	PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
@@ -70,51 +69,51 @@ target_compile_options(${PROJECT_NAME}-implementation PRIVATE
 #		-Wall
 #		-Wextra
 #		-Wpedantic
-        >
-        PUBLIC
-        $<$<CXX_COMPILER_ID:Clang,AppleClang>:
-        	$<$<CONFIG:DEBUG>:
-        		-fprofile-instr-generate
-        		-fcoverage-mapping
-        	>
-        >
-        )
+    >
+	PUBLIC
+	$<$<CXX_COMPILER_ID:Clang,AppleClang>:
+		$<$<CONFIG:DEBUG>:
+			-fprofile-instr-generate
+			-fcoverage-mapping
+		>
+	>
+)
 
 target_compile_options(${PROJECT_NAME} PRIVATE
-        $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
+	$<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
 #                -Wall
 #                -Wextra
 #                -Wpedantic
-        >
-        PUBLIC
-        $<$<CXX_COMPILER_ID:Clang,AppleClang>:
-                $<$<CONFIG:DEBUG>:
-                        -fprofile-instr-generate
-                        -fcoverage-mapping
-                >
-        >
-        )
+	>
+	PUBLIC
+	$<$<CXX_COMPILER_ID:Clang,AppleClang>:
+		$<$<CONFIG:DEBUG>:
+			-fprofile-instr-generate
+			-fcoverage-mapping
+		>
+	>
+)
 
 target_link_options(${PROJECT_NAME}-implementation PUBLIC
-        $<$<CXX_COMPILER_ID:Clang,AppleClang>:
-        	$<$<CONFIG:DEBUG>:
-        		-fprofile-instr-generate
-        		-fcoverage-mapping
-        	>
-        >
-    )
+	$<$<CXX_COMPILER_ID:Clang,AppleClang>:
+		$<$<CONFIG:DEBUG>:
+			-fprofile-instr-generate
+			-fcoverage-mapping
+		>
+	>
+)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-implementation)
 
 
 target_link_options(${PROJECT_NAME} PUBLIC
-        $<$<CXX_COMPILER_ID:Clang,AppleClang>:
-                $<$<CONFIG:DEBUG>:
-                        -fprofile-instr-generate
-                        -fcoverage-mapping
-                >
-        >
-    )
+	$<$<CXX_COMPILER_ID:Clang,AppleClang>:
+		$<$<CONFIG:DEBUG>:
+			-fprofile-instr-generate
+			-fcoverage-mapping
+		>
+	>
+)
 
 include(GNUInstallDirs)
 install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}-implementation EXPORT ${PROJECT_NAME}-targets
@@ -152,8 +151,8 @@ install(FILES
  	DESTINATION ${INSTALL_CONFIGDIR}
 )
 
-enable_testing()
-add_subdirectory(test)
+# enable_testing()
+# add_subdirectory(test)
 
 add_custom_target(lint-fix
 	COMMAND clang-format

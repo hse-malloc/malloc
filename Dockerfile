@@ -1,9 +1,12 @@
 FROM ubuntu:20.04 AS build-env
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update \
   && apt-get install --yes --no-install-recommends \
     apt-transport-https \
     ca-certificates \
+    git \
     gnupg \
     software-properties-common \
     wget \
