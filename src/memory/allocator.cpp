@@ -47,12 +47,16 @@ MemoryControlBlock *Allocator::allocBlock(std::size_t size) {
         mcb = mcb->split(uniform_int_distribution<std::size_t>
                          (1, mcb->size() - MemoryControlBlock::spaceNeeded(size))
                          (Allocator::randomGenerator));
+        // TODO: SEGFAULT if replace with:
+        // mcb = this->shiftForward(mcb, uniform_int_distribution<std::size_t>
+        //                  (0, mcb->size() - size)
+        //                  (Allocator::randomGenerator));
     }
 
     // split block to not waste space
     mcb->split(size);
     this->freeBlocks.pop(mcb);
-    mcb->setBusy();
+    mcb->makeBusy();
     return mcb;
 }
 
@@ -75,7 +79,7 @@ MemoryControlBlock* Allocator::allocBlock(std::size_t size, std::size_t alignmen
 
     mcb->split(size);
     this->freeBlocks.pop(mcb);
-    mcb->setBusy();
+    mcb->makeBusy();
     return mcb;
 }
 
@@ -149,7 +153,7 @@ MemoryControlBlock* Allocator::findFitDataAligned(std::size_t size, std::size_t 
 
         if (shift >= MemoryControlBlock::spaceNeeded(1)) {
             // shift is large enough to add block before shifted one
-            return mcb->split(shift - sizeof(MemoryControlBlock));
+            return this->shiftForward(mcb, shift);
         }
 
         // we have no choice but to waste shift,
@@ -191,6 +195,7 @@ MemoryControlBlock* Allocator::shiftForward(MemoryControlBlock *mcb, std::size_t
     shiftedMCB->setPrevFree(storedMCB.prevFree());
     shiftedMCB->setNextFree(storedMCB.nextFree());
     shiftedMCB->setSize(storedMCB.size() - shift);
+    shiftedMCB->setBusy(storedMCB.busy());
 
     return shiftedMCB;
 }
@@ -200,7 +205,7 @@ void Allocator::free(std::uintptr_t ptr) {
 }
 
 void Allocator::freeBlock(MemoryControlBlock *mcb) {
-    mcb->setFree();
+    mcb->makeFree();
     this->freeBlocks.prepend(mcb);
 
     if (MemoryControlBlock *next = mcb->next(); !next->busy()) {
@@ -277,7 +282,7 @@ void Allocator::tryUnmap(MemoryControlBlock *mcb) {
             static_cast<std::ptrdiff_t>(MemoryControlBlock::spaceNeeded(1))) {
             // there is enough space for non-empty block
             auto *first = reinterpret_cast<MemoryControlBlock *>(to);
-            first->setFree();
+            first->makeFree();
             first->setSize(diff - sizeof(MemoryControlBlock) - MemoryControlBlock::spaceNeeded(0));
             first->makeFirstInChunk();
             next->setPrev(first);

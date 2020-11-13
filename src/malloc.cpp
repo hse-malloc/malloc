@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <numeric>
 #include <cerrno>
-#include <system_error>
+#include <new>
 
 #ifdef HSE_MALLOC_DEBUG
 #include <unistd.h>

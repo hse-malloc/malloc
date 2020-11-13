@@ -71,11 +71,14 @@ class MemoryControlBlock {
     // busy returns if the block is marked as busy
     bool busy() const noexcept;
 
+    // setBusy sets busy bit
+    void setBusy(bool) noexcept;
+
     // setBusy marks block as busy
-    void setBusy() noexcept;
+    void makeBusy() noexcept;
 
     // setFree marks block as free
-    void setFree() noexcept;
+    void makeFree() noexcept;
 
     // prev returns a pointer to previous block in same chunk.
     // If it is nullptr then it is the first block in chunk.

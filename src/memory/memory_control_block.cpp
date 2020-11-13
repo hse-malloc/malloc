@@ -59,7 +59,7 @@ MemoryControlBlock *MemoryControlBlock::split(std::size_t size) noexcept {
     this->setSize(size);
 
     MemoryControlBlock *next = this->next();
-    next->setFree();
+    next->makeFree();
     next->setSize(oldSize - size - sizeof(MemoryControlBlock));
     next->setPrev(this);
     next->next()->setPrev(next);
@@ -78,12 +78,20 @@ bool MemoryControlBlock::busy() const noexcept {
     return math::nthBit(this->size_, 0);
 }
 
-void MemoryControlBlock::setBusy() noexcept {
+void MemoryControlBlock::setBusy(bool busy) noexcept {
+    if (busy) {
+        this->makeBusy();
+    } else {
+        this->makeFree();
+    }
+}
+
+void MemoryControlBlock::makeBusy() noexcept {
     this->size_ = math::setNthBit(this->size_, 0);
     this->popFree();
 }
 
-void MemoryControlBlock::setFree() noexcept {
+void MemoryControlBlock::makeFree() noexcept {
     this->size_ = math::clearNthBit(this->size_, 0);
 }
 
@@ -151,7 +159,7 @@ bool MemoryControlBlock::endOfChunk() const noexcept {
 }
 
 void MemoryControlBlock::makeEndOfChunk() noexcept {
-    this->setBusy();
+    this->makeBusy();
     this->setSize(0);
     this->popFree();
 }
