@@ -1,7 +1,9 @@
-#include "malloc/malloc_implementation.h"
-#include <cstdint>
+#include "malloc.h"
 
-#include <catch2/catch_all.hpp>
+#define CATCH_CONFIG_MAIN
+#include "catch2/catch.hpp"
+
+#include <cstdint>
 
 namespace  {
     constexpr std::size_t bigNumber = 93547289;

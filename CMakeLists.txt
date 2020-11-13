@@ -33,7 +33,7 @@ target_compile_definitions(hse_${PROJECT_NAME}
 target_include_directories(hse_${PROJECT_NAME}
 	PUBLIC
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-		$<INSTALL_INTERFACE:include>
+                $<INSTALL_INTERFACE:src>
 	PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 )
@@ -110,8 +110,8 @@ install(FILES
  	DESTINATION ${INSTALL_CONFIGDIR}
 )
 
-# enable_testing()
-# add_subdirectory(test)
+enable_testing()
+add_subdirectory(test)
 
 add_custom_target(lint-fix
 	COMMAND clang-format
