@@ -39,6 +39,8 @@ if(NOT Catch2_FOUND)
     FetchContent_MakeAvailable(Catch2)
 endif()
 
+target_link_libraries(malloc_test PRIVATE Catch2::Catch2WithMain)
+
 include(CTest)
 include(Catch)
 catch_discover_tests(malloc_test)
