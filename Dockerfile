@@ -21,6 +21,10 @@ RUN apt-get update \
   && apt-get install --yes --no-install-recommends \
     cmake \
     make \
+    libc++-11-dev \
+    libc++1-11 \
+    libc++abi-11-dev \
+    libc++abi1-11 \
     clang-11 \
     clang-tools-11 \
     clang-tidy-11 \
@@ -40,8 +44,10 @@ RUN cmake \
     -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_CXX_COMPILER="clang++-11" \
     -DCMAKE_CXX_CLANG_TIDY="clang-tidy-11" \
+    -DCMAKE_CXX_FLAGS="-nostdinc++ -I/lib/llvm-11/include/c++/v1 -L/usr/llvm-11/lib -Wl,-rpath,/lib/llvm-11/lib -fsanitize=address" \
+    -DCMAKE_EXE_LINKER_FLAGS="-v" \
     -B build \
-  && cmake --build build \
+  && cmake --build build -v \
   && cmake --install build
 
 

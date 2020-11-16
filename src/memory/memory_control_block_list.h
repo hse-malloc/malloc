@@ -43,8 +43,8 @@ class FreeMemoryControlBlockList {
   public:
     MemoryControlBlock *first;
 
-    FreeMemoryControlBlockList();
-
+    FreeMemoryControlBlockList() noexcept;
+    
     // prependFree prepends given block to start of chain of free blocks
     void prepend(MemoryControlBlock *) noexcept;
 

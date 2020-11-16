@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <tuple>
 
 namespace hse::memory {
 // MemoryControlBlock is placed right before
@@ -30,10 +31,6 @@ class MemoryControlBlock {
     // the first in chain of free blocks
     MemoryControlBlock *nextFree_;
   public:
-    MemoryControlBlock(std::size_t size = 0, MemoryControlBlock *prev = nullptr,
-                       MemoryControlBlock *prevFree = nullptr,
-                       MemoryControlBlock *nextFree = nullptr);
-
     // fromDataPtr returns pointer to block which controls data pointed by given ptr
     static MemoryControlBlock *fromDataPtr(std::uintptr_t) noexcept;
 
@@ -62,11 +59,7 @@ class MemoryControlBlock {
     // where first of them has given size.
     // It returns pointer to second block in case of split,
     // or pointer to itself otherwise
-    MemoryControlBlock* split(std::size_t) noexcept;
-
-    // rsplit is the same as split, but it makes second (right)
-    // block to be of given size
-    MemoryControlBlock* rsplit(std::size_t) noexcept;
+    [[nodiscard]] MemoryControlBlock* split(std::size_t) noexcept;
 
     // busy returns if the block is marked as busy
     bool busy() const noexcept;
@@ -74,11 +67,11 @@ class MemoryControlBlock {
     // setBusy sets busy bit
     void setBusy(bool) noexcept;
 
-    // setBusy marks block as busy
-    void makeBusy() noexcept;
+    // markBusy marks block as busy
+    void markBusy() noexcept;
 
-    // setFree marks block as free
-    void makeFree() noexcept;
+    // markFree marks block as free
+    void markFree() noexcept;
 
     // prev returns a pointer to previous block in same chunk.
     // If it is nullptr then it is the first block in chunk.

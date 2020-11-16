@@ -3,7 +3,7 @@
 
 namespace hse::memory {
 
-FreeMemoryControlBlockList::FreeMemoryControlBlockList():
+FreeMemoryControlBlockList::FreeMemoryControlBlockList() noexcept :
     first(nullptr) {}
 
 void FreeMemoryControlBlockList::prepend(MemoryControlBlock *mcb) noexcept {

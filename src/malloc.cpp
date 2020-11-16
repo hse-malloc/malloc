@@ -2,10 +2,10 @@
 #include "math/math.h"
 #include "memory/allocator.h"
 
+#include <cerrno>
 #include <cstddef> // NOLINT(llvmlibc-restrict-system-libc-headers)
 #include <cstdint>
 #include <numeric>
-#include <cerrno>
 
 #ifdef HSE_MALLOC_DEBUG
 #include <unistd.h>

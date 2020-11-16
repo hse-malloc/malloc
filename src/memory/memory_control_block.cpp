@@ -3,18 +3,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 
 namespace hse::memory {
-
-MemoryControlBlock::MemoryControlBlock(std::size_t size,
-                                       MemoryControlBlock *prev,
-                                       MemoryControlBlock *prevFree,
-                                       MemoryControlBlock *nextFree)
-    : prev_(prev) {
-    this->setSize(size);
-    this->setPrevFree(prevFree);
-    this->setNextFree(nextFree);
-}
 
 MemoryControlBlock *MemoryControlBlock::fromDataPtr(std::uintptr_t ptr) noexcept {
     return reinterpret_cast<MemoryControlBlock *>(ptr) - 1;
@@ -35,7 +26,7 @@ std::size_t MemoryControlBlock::size() const noexcept {
 bool MemoryControlBlock::empty() const noexcept { return this->size() == 0; }
 
 std::size_t MemoryControlBlock::setSize(std::size_t size) noexcept {
-    return (this->size_ = math::roundUp<std::size_t>(size, 2) | this->busy());
+    return (this->size_ = math::roundUp<std::size_t>(size, 2) | static_cast<std::size_t>(this->busy()));
 }
 
 std::size_t MemoryControlBlock::grow(std::size_t size) noexcept {
@@ -46,7 +37,7 @@ bool MemoryControlBlock::fits(std::size_t size) const noexcept {
     return this->size() >= size;
 }
 
-MemoryControlBlock *MemoryControlBlock::split(std::size_t size) noexcept {
+MemoryControlBlock* MemoryControlBlock::split(std::size_t size) noexcept {
     if (size == 0) {
         return this;
     }
@@ -58,20 +49,16 @@ MemoryControlBlock *MemoryControlBlock::split(std::size_t size) noexcept {
     std::size_t oldSize = this->size();
     this->setSize(size);
 
-    MemoryControlBlock *next = this->next();
-    next->makeFree();
-    next->setSize(oldSize - size - sizeof(MemoryControlBlock));
-    next->setPrev(this);
-    next->next()->setPrev(next);
+    MemoryControlBlock *right = this->next();
+    right->markFree();
+    right->setSize(oldSize - size - sizeof(MemoryControlBlock));
+    right->setPrev(this); 
+    right->next()->setPrev(right);
 
-    next->setNextFree(this->nextFree());
-    next->setPrevFree(this);
-    return next;
-}
-
-MemoryControlBlock* MemoryControlBlock::rsplit(std::size_t size) noexcept {
-    size = math::roundUp<std::size_t>(size, 2);
-    return this->split(this->size() - size - sizeof(MemoryControlBlock));
+    right->setNextFree(this->nextFree());
+    right->setPrevFree(this); 
+ 
+    return right;
 }
 
 bool MemoryControlBlock::busy() const noexcept {
@@ -80,18 +67,18 @@ bool MemoryControlBlock::busy() const noexcept {
 
 void MemoryControlBlock::setBusy(bool busy) noexcept {
     if (busy) {
-        this->makeBusy();
+        this->markBusy();
     } else {
-        this->makeFree();
+        this->markFree();
     }
 }
 
-void MemoryControlBlock::makeBusy() noexcept {
+void MemoryControlBlock::markBusy() noexcept {
     this->size_ = math::setNthBit(this->size_, 0);
     this->popFree();
 }
 
-void MemoryControlBlock::makeFree() noexcept {
+void MemoryControlBlock::markFree() noexcept {
     this->size_ = math::clearNthBit(this->size_, 0);
 }
 
@@ -159,7 +146,7 @@ bool MemoryControlBlock::endOfChunk() const noexcept {
 }
 
 void MemoryControlBlock::makeEndOfChunk() noexcept {
-    this->makeBusy();
+    this->markBusy();
     this->setSize(0);
     this->popFree();
 }

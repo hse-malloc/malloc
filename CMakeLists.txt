@@ -26,19 +26,20 @@ set_target_properties(hse_${PROJECT_NAME} PROPERTIES
 
 target_compile_definitions(hse_${PROJECT_NAME}
     PRIVATE "$<$<CONFIG:DEBUG>:HSE_MALLOC_DEBUG>"
-    PRIVATE "$<$<PLATFORM_ID:Linux, Darwin>:HAVE_DEV_URANDOM>"
-    PRIVATE "$<$<PLATFORM_ID:Linux, Darwin>:HAVE_MMAP>"
+    PRIVATE "$<$<PLATFORM_ID:Linux,Darwin>:HAVE_DEV_URANDOM>"
+    PRIVATE "$<$<PLATFORM_ID:Linux,Darwin>:HAVE_MMAP>"
     PRIVATE "$<$<PLATFORM_ID:Windows>:HAVE_VIRTUAL_ALLOC>"
 )
 target_include_directories(hse_${PROJECT_NAME}
 	PUBLIC
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-                $<INSTALL_INTERFACE:src>
+        $<INSTALL_INTERFACE:src>
 	PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 target_compile_features(hse_${PROJECT_NAME} PRIVATE cxx_std_20)
 target_compile_options(hse_${PROJECT_NAME} PRIVATE
+	-stdlib=libc++
 	$<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
 #		-Wall
 #		-Wextra
@@ -62,8 +63,9 @@ add_library(Malloc::Malloc ALIAS ${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME} hse_${PROJECT_NAME})
 
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
-	CXX_EXTENSIONS $<TARGET_PROPERTY:hse_${PROJECT_NAME},CXX_EXTENSIONS>
 	INCLUDE_DIRECTORIES $<TARGET_PROPERTY:hse_${PROJECT_NAME},INCLUDE_DIRECTORIES>
 	COMPILE_FEATURES $<TARGET_PROPERTY:hse_${PROJECT_NAME},COMPILE_FEATURES>
 	COMPILE_OPTIONS $<TARGET_PROPERTY:hse_${PROJECT_NAME},COMPILE_OPTIONS>
@@ -72,7 +74,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 	PUBLIC_HEADER
 		include/malloc.h
 )
-
 
 include(GNUInstallDirs)
 install(TARGETS ${PROJECT_NAME} hse_${PROJECT_NAME} EXPORT ${PROJECT_NAME}-targets

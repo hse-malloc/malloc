@@ -56,6 +56,10 @@ class Allocator {
     // 3. mcb->fits(shift + 2)
     [[nodiscard]] MemoryControlBlock* shiftForward(MemoryControlBlock* mcb, std::size_t shift) noexcept;
 
+    // split splits the block into two block
+    // and tries to absorb the block next to the right one
+    MemoryControlBlock* split(MemoryControlBlock *mcb, std::size_t size) noexcept;
+
     // tryUnmap tries to unmap memory pages within given block
     void tryUnmap(MemoryControlBlock *);
 
