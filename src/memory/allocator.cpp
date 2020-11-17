@@ -263,7 +263,7 @@ void Allocator::tryUnmap(MemoryControlBlock *mcb) {
     }
 
     // store block in case it is in pages we are to delete
-    MemoryControlBlock mcbStored = *mcb;
+    auto mcbStored = *mcb;
 
     system::munmap(from, to - from);
 

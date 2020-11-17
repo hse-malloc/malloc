@@ -1,16 +1,27 @@
-#include "malloc.h"
+#include <malloc.h>
 
 #define CATCH_CONFIG_MAIN
 #include "catch2/catch.hpp"
 
-#include <span>
+#include <array>
 #include <cstdint>
+#include <span>
 
-namespace  {
-    constexpr std::size_t bigNumber = 93547289;
-    constexpr std::size_t notSoBigNumber = 5000;
-    constexpr std::size_t lessThanPage = 2048;
-    constexpr std::size_t smallNumber = 42;
+namespace {
+    constexpr std::size_t BIG_NUMBER     = (1UL << 23U) - 1;
+    constexpr std::size_t MEDIUM_NUMBER  = (1UL << 13U) + 1;
+    constexpr std::size_t LESS_THAN_PAGE = 1UL << 11U;
+    constexpr std::size_t SMALL_NUMBER   = 42;
+} // namespace
+
+template<typename T, std::size_t size>
+void testArray(std::span<T, size> s) {
+    for (auto &i : s) {
+       i = '0';
+    }
+    for (auto &i : s) {
+        REQUIRE(i == '0');
+    }
 }
 
 TEST_CASE("malloc: 1 byte", "[malloc][free]") {
@@ -20,179 +31,134 @@ TEST_CASE("malloc: 1 byte", "[malloc][free]") {
     hse::free(ptr);
 }
 
-TEST_CASE("malloc: array of bytes", "[malloc][free]" ) {
-    constexpr std::size_t len = 93547289;
-    std::span s(reinterpret_cast<std::uint8_t *>(hse::malloc(len * sizeof(std::uint8_t))), len);
-    for (std::uint8_t &i : s) {
-        i = '0';
-    }
-    for (std::uint8_t &i : s) {
-        REQUIRE(i == '0');
+TEST_CASE("malloc: array of bytes", "[malloc][free]") {
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(BIG_NUMBER * sizeof(std::uint8_t)));
+    testArray(std::span{ptr, BIG_NUMBER});
+    hse::free(ptr);
+}
+
+TEST_CASE("malloc: big object", "[malloc][free]") {
+    struct S {
+        std::span<std::uint8_t, BIG_NUMBER> data;
+    };
+    auto *ptr = reinterpret_cast<S *>(hse::malloc(sizeof(S)));
+    testArray(ptr->data);
+    hse::free(ptr);
+}
+
+TEST_CASE("malloc: array of big objects", "[malloc][free]") {
+    struct S {
+        std::span<std::uint8_t, MEDIUM_NUMBER> data;
+    };
+
+    std::span s{reinterpret_cast<S *>(hse::malloc(SMALL_NUMBER * sizeof(S))), SMALL_NUMBER};
+    for (auto &i : s) {
+        testArray(i.data);
     }
     hse::free(s.data());
 }
 
-TEST_CASE( "Allocatig big single object with malloc", "[malloc][free]" ) {
+TEST_CASE("calloc: zero arguments", "[calloc]") {
+    REQUIRE(hse::calloc(0, 1) == nullptr);
+    REQUIRE(hse::calloc(1, 0) == nullptr);
+    REQUIRE(hse::calloc(0, 0) == nullptr);
+}
 
-    struct bigObject
-    {
-        std::uint8_t data[bigNumber];
+TEST_CASE("calloc: array of small objects", "[calloc][free]") {
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::calloc(MEDIUM_NUMBER, sizeof(std::uint8_t)));
+    testArray(std::span{ptr, MEDIUM_NUMBER});
+    hse::free(ptr);
+}
+
+TEST_CASE("calloc: array of big objects", "[calloc][free]") {
+    struct S {
+        std::span<std::uint8_t, MEDIUM_NUMBER> data;
     };
 
-    auto *ptr = reinterpret_cast<bigObject *>(hse::malloc(sizeof(bigObject)));
-    ptr->data[13] = '0';
-    REQUIRE(ptr->data[13] == '0');
+    std::span s{reinterpret_cast<S *>(hse::calloc(SMALL_NUMBER, sizeof(S))), SMALL_NUMBER};
+    for (auto &i : s) {
+        testArray(i.data);
+    }
+    hse::free(s.data());
+}
+
+TEST_CASE("realloc: nullptr", "[realloc][free]") {
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(nullptr, MEDIUM_NUMBER * sizeof(std::uint8_t)));
+    testArray(std::span{ptr, MEDIUM_NUMBER});
     hse::free(ptr);
 }
 
-TEST_CASE( "Allocatig array of big objects with malloc", "[malloc][free]" ) {
-    struct bigObject
-    {
-        std::uint8_t data[notSoBigNumber];
-    };
-    auto *ptr = reinterpret_cast<bigObject *>(hse::malloc(sizeof (bigObject[smallNumber])));
-    for(std::size_t i = 0; i < smallNumber; ++i){
-        ptr[i].data[0] = '0';
-        REQUIRE(ptr[i].data[0] == '0');
-    }
+TEST_CASE("realloc: bigger after small malloc", "[malloc][realloc][free][!mayfail]" ) {
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(SMALL_NUMBER * sizeof(std::uint8_t)));
+    testArray(std::span{ptr, SMALL_NUMBER});
+    ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(ptr, MEDIUM_NUMBER));
+    testArray(std::span{ptr, MEDIUM_NUMBER});
     hse::free(ptr);
 }
 
-
-TEST_CASE( "Calloc with zero arguments", "[calloc]" ) {
-    REQUIRE(hse::calloc(0, 11) == nullptr);
-    REQUIRE(hse::calloc(11, 0) == nullptr);
-    REQUIRE(hse::calloc(0,  0) == nullptr);
-}
-
-
-TEST_CASE( "Allocatig array of small objects with calloc", "[calloc][free]" ) {
-    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::calloc(notSoBigNumber, sizeof (std::uint8_t)));
-    for(std::size_t i = 0; i < notSoBigNumber; ++i){
-        ptr[i] = '0';
-        REQUIRE(ptr[i] == '0');
-    }
+TEST_CASE("realloc: bigger after big malloc", "[malloc][realloc][free]" ) {
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(MEDIUM_NUMBER * sizeof(std::uint8_t)));
+    testArray(std::span{ptr, MEDIUM_NUMBER});
+    ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(ptr, BIG_NUMBER));
+    testArray(std::span{ptr, BIG_NUMBER});
     hse::free(ptr);
 }
 
-TEST_CASE( "Allocatig array of big objects with calloc", "[calloc][free]" ) {
-    struct bigObject
-    {
-        std::uint8_t data[notSoBigNumber];
-    };
-    auto *ptr = reinterpret_cast<bigObject *>(hse::calloc(smallNumber, sizeof (bigObject)));
-    for(std::size_t i = 0; i < smallNumber; ++i){
-        ptr[i].data[0] = '0';
-        REQUIRE(ptr[i].data[0] == '0');
-    }
+TEST_CASE("realloc: smaller after big malloc", "[malloc][realloc][free]" ) {
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(BIG_NUMBER * sizeof(std::uint8_t)));
+    testArray(std::span{ptr, BIG_NUMBER});
+    ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(ptr, MEDIUM_NUMBER));
+    testArray(std::span{ptr, MEDIUM_NUMBER});
     hse::free(ptr);
 }
 
-
-TEST_CASE( "Realloc with nullptr", "[realloc][free]" ) {
-    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(nullptr, notSoBigNumber));
-    for(std::size_t i = 0; i < notSoBigNumber; ++i){
-        ptr[i] = '0';
-        REQUIRE(ptr[i] == '0');
-    }
+TEST_CASE("realloc: smaller than page after malloc smaller than page", "[malloc][realloc][free]" ) {
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(LESS_THAN_PAGE * sizeof(std::uint8_t)));
+    testArray(std::span{ptr, LESS_THAN_PAGE});
+    ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(ptr, SMALL_NUMBER));
+    testArray(std::span{ptr, SMALL_NUMBER});
     hse::free(ptr);
 }
 
-TEST_CASE( "Realloc bigger after small malloc", "[malloc][realloc][free][!mayfail]" ) {
-    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(smallNumber));
-    for(std::size_t i = 0; i < smallNumber; ++i){
-        ptr[i] = '0';
-        REQUIRE(ptr[i] == '0');
-    }
-    ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(ptr, notSoBigNumber));
-    for(std::size_t i = 0; i < notSoBigNumber; ++i){
-        ptr[i] = '1';
-        REQUIRE(ptr[i] == '1');
-    }
+TEST_CASE("realloc: smaller than page after malloc bigger than page", "[malloc][realloc][free]" ) {
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(MEDIUM_NUMBER * sizeof(std::uint8_t)));
+    testArray(std::span{ptr, MEDIUM_NUMBER});
+    ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(ptr, SMALL_NUMBER));
+    testArray(std::span{ptr, SMALL_NUMBER});
     hse::free(ptr);
 }
 
-TEST_CASE( "Realloc bigger after big malloc", "[malloc][realloc][free]" ) {
-    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(notSoBigNumber));
-    for(std::size_t i = 0; i < notSoBigNumber; ++i){
-        ptr[i] = '0';
-        REQUIRE(ptr[i] == '0');
-    }
-    ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(ptr, bigNumber));
-    for(std::size_t i = 0; i < bigNumber; ++i){
-        ptr[i] = '1';
-        REQUIRE(ptr[i] == '1');
-    }
+TEST_CASE("aligned_alloc", "[aligned_alloc][free]") {
+    constexpr std::size_t ALIGNMENT = 2UL << 6U;
+    constexpr std::size_t SIZE      = ALIGNMENT * 4;
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::aligned_alloc(ALIGNMENT, SIZE * sizeof(std::uint8_t)));
+    REQUIRE(reinterpret_cast<std::uintptr_t>(ptr) % ALIGNMENT == 0);
+    testArray(std::span{ptr, SIZE});
     hse::free(ptr);
 }
 
+TEST_CASE("aligned_alloc: invalid aligment", "[aligned_alloc]") {
+    REQUIRE(hse::aligned_alloc(16,  42) == nullptr);
+    REQUIRE(hse::aligned_alloc(3,   42) == nullptr);
+    REQUIRE(hse::aligned_alloc(67,  42) == nullptr);
+    REQUIRE(hse::aligned_alloc(120, 42) == nullptr);
+    REQUIRE(hse::aligned_alloc(0,   42) == nullptr);
+}
 
-TEST_CASE( "Realloc smaller after big malloc", "[malloc][realloc][free]" ) {
-    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(bigNumber));
-    for(std::size_t i = 0; i < bigNumber; ++i){
-        ptr[i] = '0';
-        REQUIRE(ptr[i] == '0');
-    }
-    ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(ptr, notSoBigNumber));
-    for(std::size_t i = 0; i < notSoBigNumber; ++i){
-        ptr[i] = '1';
-        REQUIRE(ptr[i] == '1');
-    }
+TEST_CASE("aligned_alloc: big aligment", "[aligned_alloc][free]") {
+    constexpr std::size_t ALIGNMENT = 2UL << 14U;
+    constexpr std::size_t SIZE      = ALIGNMENT * 2;
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::aligned_alloc(ALIGNMENT, SIZE * sizeof(std::uint8_t)));
+    REQUIRE(reinterpret_cast<std::uintptr_t>(ptr) % ALIGNMENT == 0);
+    testArray(std::span{ptr, SIZE});
     hse::free(ptr);
 }
 
-TEST_CASE( "Realloc smaller than page after malloc smaller than page", "[malloc][realloc][free]" ) {
-    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(lessThanPage));
-    for(std::size_t i = 0; i < lessThanPage; ++i){
-        ptr[i] = '0';
-        REQUIRE(ptr[i] == '0');
-    }
-    ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(ptr, smallNumber));
-    for(std::size_t i = 0; i < smallNumber; ++i){
-        ptr[i] = '1';
-        REQUIRE(ptr[i] == '1');
-    }
-    hse::free(ptr);
-}
-
-TEST_CASE( "Realloc smaller than page after malloc bigger than page", "[malloc][realloc][free]" ) {
-    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(notSoBigNumber));
-    for(std::size_t i = 0; i < notSoBigNumber; ++i){
-        ptr[i] = '0';
-        REQUIRE(ptr[i] == '0');
-    }
-    ptr = reinterpret_cast<std::uint8_t *>(hse::realloc(ptr, smallNumber));
-    for(std::size_t i = 0; i < smallNumber; ++i){
-        ptr[i] = '1';
-        REQUIRE(ptr[i] == '1');
-    }
-    hse::free(ptr);
-}
-
-TEST_CASE( "Aligned_alloc simple test", "[aligned_alloc][free]" ) {
-    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::aligned_alloc(64, 64));
-    for(std::size_t i = 0; i < 64; ++i){
-        ptr[i] = '0';
-        REQUIRE(ptr[i] == '0');
-    }
-    hse::free(ptr);
-}
-
-
-TEST_CASE( "Aligned_alloc with invalid aligment", "[aligned_alloc]" ) {
-    REQUIRE(hse::aligned_alloc(16, smallNumber)==nullptr);
-    REQUIRE(hse::aligned_alloc(3, smallNumber)==nullptr);
-    REQUIRE(hse::aligned_alloc(67, smallNumber)==nullptr);
-    REQUIRE(hse::aligned_alloc(120, smallNumber)==nullptr);
-    REQUIRE(hse::aligned_alloc(0, smallNumber)==nullptr);
-}
-
-TEST_CASE( "Aligned_alloc with big aligment", "[aligned_alloc][free]" ) {
-    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::aligned_alloc(4096*4, 4096*4));
-    hse::free(ptr);
-}
-
-TEST_CASE( "Aligned_alloc with small aligment", "[aligned_alloc][free]" ) {
-    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::aligned_alloc(64, 10248*64));
+TEST_CASE("aligned_alloc: small aligment", "[aligned_alloc][free]") {
+    constexpr std::size_t ALIGNMENT = 2UL << 6U;
+    constexpr std::size_t SIZE      = ALIGNMENT * 20;
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::aligned_alloc(ALIGNMENT, SIZE * sizeof(std::uint8_t)));
+    REQUIRE(reinterpret_cast<std::uintptr_t>(ptr) % ALIGNMENT == 0);
+    testArray(std::span{ptr, SIZE});
     hse::free(ptr);
 }
