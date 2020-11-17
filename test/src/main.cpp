@@ -39,21 +39,21 @@ TEST_CASE("malloc: array of bytes", "[malloc][free]") {
 
 TEST_CASE("malloc: big object", "[malloc][free]") {
     struct S {
-        std::span<std::uint8_t, BIG_NUMBER> data;
+        std::array<std::uint8_t, BIG_NUMBER> data;
     };
     auto *ptr = reinterpret_cast<S *>(hse::malloc(sizeof(S)));
-    testArray(ptr->data);
+    testArray(std::span{ptr->data});
     hse::free(ptr);
 }
 
 TEST_CASE("malloc: array of big objects", "[malloc][free]") {
     struct S {
-        std::span<std::uint8_t, MEDIUM_NUMBER> data;
+        std::array<std::uint8_t, MEDIUM_NUMBER> data;
     };
 
     std::span s{reinterpret_cast<S *>(hse::malloc(SMALL_NUMBER * sizeof(S))), SMALL_NUMBER};
     for (auto &i : s) {
-        testArray(i.data);
+        testArray(std::span{i.data});
     }
     hse::free(s.data());
 }
@@ -72,12 +72,12 @@ TEST_CASE("calloc: array of small objects", "[calloc][free]") {
 
 TEST_CASE("calloc: array of big objects", "[calloc][free]") {
     struct S {
-        std::span<std::uint8_t, MEDIUM_NUMBER> data;
+        std::array<std::uint8_t, MEDIUM_NUMBER> data;
     };
 
     std::span s{reinterpret_cast<S *>(hse::calloc(SMALL_NUMBER, sizeof(S))), SMALL_NUMBER};
     for (auto &i : s) {
-        testArray(i.data);
+        testArray(std::span{i.data});
     }
     hse::free(s.data());
 }
