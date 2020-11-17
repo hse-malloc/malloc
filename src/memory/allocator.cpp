@@ -94,6 +94,8 @@ std::uintptr_t Allocator::realloc(std::uintptr_t ptr, std::size_t size) {
 MemoryControlBlock *Allocator::reallocBlock(MemoryControlBlock *mcb, std::size_t size) {
     if (mcb->fits(size)) {
         this->split(mcb, size);
+        this->freeBlocks.pop(mcb);
+        mcb->markBusy();
         return mcb;
     }
 
