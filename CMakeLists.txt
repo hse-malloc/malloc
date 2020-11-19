@@ -31,6 +31,7 @@ target_compile_definitions(hse_${PROJECT_NAME}
     PRIVATE "$<$<PLATFORM_ID:Linux,Darwin>:HAVE_DEV_URANDOM>"
     PRIVATE "$<$<PLATFORM_ID:Linux,Darwin>:HAVE_MMAP>"
     PRIVATE "$<$<PLATFORM_ID:Windows>:HAVE_VIRTUAL_ALLOC>"
+    PRIVATE "$<$<BOOL:HSE_MALLOC_NO_RANDOM>:HSE_MALLOC_NO_RANDOM>"
 )
 target_include_directories(hse_${PROJECT_NAME}
 	PUBLIC
