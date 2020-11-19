@@ -22,6 +22,8 @@ $ cmake \
 $ cmake --build build
 ```
 
+It is possible to disable randomization by setting the `-DHSE_MALLOC_NO_RANDOM=TRUE` 
+
 ## Install
 
 ```sh
