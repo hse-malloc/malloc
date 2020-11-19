@@ -1,3 +1,4 @@
+#define HSE_MALLOC_NO_RANDOM
 #include <malloc.h>
 
 #define CATCH_CONFIG_MAIN

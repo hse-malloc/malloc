@@ -1,18 +1,22 @@
 #include "allocator.h"
 #include "math/math.h"
 #include "memory_control_block.h"
-#include "random/random.h"
 #include "system/system.h"
+
+#ifndef HSE_MALLOC_NO_RANDOM
+#include "random/random.h"
+#include <random>
+#endif
 
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <random>
 
 namespace hse::memory {
 
+#ifndef HSE_MALLOC_NO_RANDOM
 sc69069_t Allocator::randomGenerator(std::random_device
 
 #ifdef HAVE_DEV_URANDOM
@@ -21,6 +25,7 @@ sc69069_t Allocator::randomGenerator(std::random_device
                                                   {}
 #endif
                                                     ());
+#endif
 
 constexpr MCBPredicate auto mcbFits(std::size_t size) {
     return [size](const MemoryControlBlock *mcb) noexcept {
@@ -42,16 +47,18 @@ MemoryControlBlock *Allocator::allocBlock(std::size_t size) {
         mcb = this->allocChunk(size);
     }
 
+#ifndef HSE_MALLOC_NO_RANDOM
     // if there is a space to prepend padding block
     if (mcb->fits(2 + MemoryControlBlock::spaceNeeded(size))) {
-        mcb = this->split(mcb, uniform_int_distribution<std::size_t>
-                         (1, mcb->size() - MemoryControlBlock::spaceNeeded(size))
-                         (Allocator::randomGenerator));
+//        mcb = this->split(mcb, uniform_int_distribution<std::size_t>
+//                         (1, mcb->size() - MemoryControlBlock::spaceNeeded(size))
+//                         (Allocator::randomGenerator));
         // TODO: SEGFAULT if replace with:
-        // mcb = this->shiftForward(mcb, uniform_int_distribution<std::size_t>
-        //                  (0, mcb->size() - size)
-        //                  (Allocator::randomGenerator));
+         mcb = this->shiftForward(mcb, uniform_int_distribution<std::size_t>
+                          (0, mcb->size() - size)
+                          (Allocator::randomGenerator));
     }
+#endif
 
     // split block to not waste space
     this->split(mcb, size);
@@ -70,12 +77,14 @@ MemoryControlBlock* Allocator::allocBlock(std::size_t size, std::size_t alignmen
         mcb = this->shiftForward(mcb, shift);
     }
 
+#ifndef HSE_MALLOC_NO_RANDOM
     if (mcb->fits(math::roundUp(sizeof(MemoryControlBlock), alignment) + size)) {
         auto timesAlignment = uniform_int_distribution<std::size_t>
             (0, (mcb->size() - size) / alignment)
             (Allocator::randomGenerator);
         mcb = this->shiftForward(mcb, timesAlignment * alignment);
     }
+#endif
 
     mcb->markBusy();
     this->split(mcb, size);

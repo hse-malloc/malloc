@@ -3,18 +3,25 @@
 
 #include "memory_control_block.h"
 #include "memory_control_block_list.h"
+
+#ifndef HSE_MALLOC_NO_RANDOM
 #include "random/random.h"
+#endif
 
 #include <cstddef>
 #include <cstdint>
+
 
 namespace hse::memory {
 // Allocator is responsible for managing allocated memory pages and chunks of
 // blocks
 class Allocator {
   private:
+
+#ifndef HSE_MALLOC_NO_RANDOM
     // PRNG generator which is used in every call to random value
     static sc69069_t randomGenerator;
+#endif
 
     FreeMemoryControlBlockList freeBlocks;
 
