@@ -19,10 +19,12 @@ add_library(hse_${PROJECT_NAME}
 	src/memory/allocator.h
 	src/random/random.h
 	src/math/math.h
+        src/concepts/numbers.h
 )
 set_target_properties(hse_${PROJECT_NAME} PROPERTIES
     CXX_EXTENSIONS OFF
-	EXPORT_NAME HSE_Malloc)
+    EXPORT_NAME HSE_Malloc
+)
 
 target_compile_definitions(hse_${PROJECT_NAME}
     PRIVATE "$<$<CONFIG:DEBUG>:HSE_MALLOC_DEBUG>"
@@ -41,9 +43,9 @@ target_compile_features(hse_${PROJECT_NAME} PRIVATE cxx_std_20)
 target_compile_options(hse_${PROJECT_NAME} PRIVATE
 	-stdlib=libc++
 	$<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
-#		-Wall
-#		-Wextra
-#		-Wpedantic
+                -Wall
+                -Wextra
+                -Wpedantic
     >
 	PUBLIC
 	$<$<CXX_COMPILER_ID:Clang,AppleClang>:

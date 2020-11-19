@@ -18,9 +18,9 @@ target_include_directories(${PROJECT_NAME}_test PRIVATE
 target_compile_options(${PROJECT_NAME}_test PRIVATE
 	-stdlib=libc++
 	$<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
-#		-Wall
-#		-Wextra
-#		-Wpedantic
+                -Wall
+                -Wextra
+                -Wpedantic
 	>
 	PUBLIC
 	$<$<CXX_COMPILER_ID:Clang,AppleClang>:
