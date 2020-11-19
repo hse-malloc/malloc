@@ -114,8 +114,10 @@ install(FILES
  	DESTINATION ${INSTALL_CONFIGDIR}
 )
 
-enable_testing()
-add_subdirectory(test)
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    enable_testing()
+    add_subdirectory(test)
+endif()
 
 add_custom_target(lint-fix
 	COMMAND clang-format
