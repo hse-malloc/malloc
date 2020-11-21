@@ -18,7 +18,6 @@ namespace hse::memory {
 
 #ifndef HSE_MALLOC_NO_RANDOM
 sc69069_t Allocator::randomGenerator(std::random_device
-
 #ifdef HAVE_DEV_URANDOM
                                                   ("/dev/urandom")
 #else
@@ -34,11 +33,11 @@ constexpr MCBPredicate auto mcbFits(std::size_t size) {
 }
 
 std::uintptr_t Allocator::alloc(std::size_t size) {
-    return this->allocBlock(size)->data();
+    return MemoryControlBlock::data(this->allocBlock(size));
 }
 
 std::uintptr_t Allocator::alloc(std::size_t size, std::size_t alignment) {
-    return this->allocBlock(size, alignment)->data();
+    return MemoryControlBlock::data(this->allocBlock(size, alignment));
 }
 
 MemoryControlBlock *Allocator::allocBlock(std::size_t size) {
@@ -72,7 +71,7 @@ MemoryControlBlock* Allocator::allocBlock(std::size_t size, std::size_t alignmen
     if (mcb == nullptr) {
         mcb = this->allocChunk(size + alignment);
 
-        auto data = mcb->data();
+        auto data = MemoryControlBlock::data(mcb);
         auto shift = math::roundUp(data, alignment) - data;
         mcb = this->shiftForward(mcb, shift);
     }
@@ -97,7 +96,7 @@ std::uintptr_t Allocator::realloc(std::uintptr_t ptr, std::size_t size) {
     if (ptr == reinterpret_cast<std::uintptr_t>(nullptr)) {
         return this->alloc(size);
     }
-    return this->reallocBlock(MemoryControlBlock::fromDataPtr(ptr), size)->data();
+    return MemoryControlBlock::data(this->reallocBlock(MemoryControlBlock::fromDataPtr(ptr), size));
 }
 
 MemoryControlBlock *Allocator::reallocBlock(MemoryControlBlock *mcb, std::size_t size) {
@@ -109,19 +108,19 @@ MemoryControlBlock *Allocator::reallocBlock(MemoryControlBlock *mcb, std::size_t
     }
 
     // check if we can absorb next block and there will be enough space
-    if (auto *next = mcb->next();
+    if (auto *next = MemoryControlBlock::next(mcb);
         !next->busy() && size <= mcb->size() + sizeof(MemoryControlBlock) + next->size()) {
-        this->freeBlocks.pop(mcb->next());
-        mcb->absorbNext();
+        this->freeBlocks.pop(next);
+        MemoryControlBlock::absorbNext(mcb);
         this->split(mcb, size); // mcb can be larger than we need after the absorption
         return mcb;
     }
 
     auto *oldMCB = mcb;
     mcb = this->allocBlock(size);
-    std::copy(reinterpret_cast<std::uint16_t *>(oldMCB->data()),
-        reinterpret_cast<std::uint16_t *>(oldMCB->data() + oldMCB->size()),
-        reinterpret_cast<std::uint16_t *>(mcb->data()));
+    std::copy(reinterpret_cast<std::uint16_t *>(MemoryControlBlock::data(oldMCB)),
+        reinterpret_cast<std::uint16_t *>(MemoryControlBlock::data(oldMCB) + oldMCB->size()),
+        reinterpret_cast<std::uint16_t *>(MemoryControlBlock::data(mcb)));
     this->freeBlock(oldMCB);
     return mcb;
 }
@@ -135,7 +134,7 @@ MemoryControlBlock *Allocator::allocChunk(std::size_t size) {
     mcb->setSize(totalSize - sizeof(MemoryControlBlock) - spaceForEnd);
     this->freeBlocks.prepend(mcb);
 
-    MemoryControlBlock *end = mcb->next();
+    auto *end = MemoryControlBlock::next(mcb);
     end->setPrev(mcb);
     end->makeEndOfChunk();
 
@@ -147,7 +146,7 @@ MemoryControlBlock* Allocator::findFitDataAligned(std::size_t size, std::size_t 
     MemoryControlBlock *mcbWithMinWasteShift = nullptr;
 
     for (auto *mcb = this->freeBlocks.first; mcb != nullptr; mcb = mcb->nextFree()) {
-        auto data = mcb->data();
+        auto data = MemoryControlBlock::data(mcb);
         auto shift = math::roundUp(data, alignment) - data;
 
         if (!mcb->fits(shift + size)) {
@@ -198,7 +197,7 @@ MemoryControlBlock* Allocator::shiftForward(MemoryControlBlock *mcb, std::size_t
 
         if (auto *prev = mcb->prev(); prev != nullptr && !prev->busy()) {
             this->freeBlocks.pop(mcb);
-            prev->absorbNext();
+            MemoryControlBlock::absorbNext(prev);
         }
 
         return right;
@@ -212,7 +211,7 @@ MemoryControlBlock* Allocator::shiftForward(MemoryControlBlock *mcb, std::size_t
         this->freeBlocks.first = shiftedMCB;
     }
 
-    mcb->next()->setPrev(shiftedMCB);
+    MemoryControlBlock::next(mcb)->setPrev(shiftedMCB);
     if (auto *prev = mcb->prev(); prev != nullptr) {
         mcb->prev()->grow(shift);
     }
@@ -225,10 +224,10 @@ MemoryControlBlock* Allocator::shiftForward(MemoryControlBlock *mcb, std::size_t
 }
 
 MemoryControlBlock* Allocator::split(MemoryControlBlock *mcb, std::size_t size) noexcept {
-    auto *right = mcb->split(size);
-    if (auto *next = right->next(); !next->busy()) {
+    auto *right = MemoryControlBlock::split(mcb, size);
+    if (auto *next = MemoryControlBlock::next(right); !next->busy()) {
         this->freeBlocks.pop(next);
-        right->absorbNext();
+        MemoryControlBlock::absorbNext(right);
     }
     return right;
 }
@@ -241,30 +240,30 @@ void Allocator::freeBlock(MemoryControlBlock *mcb) {
     mcb->markFree();
     this->freeBlocks.prepend(mcb);
 
-    if (MemoryControlBlock *next = mcb->next(); !next->busy()) {
+    if (MemoryControlBlock *next = MemoryControlBlock::next(mcb); !next->busy()) {
         this->freeBlocks.pop(next);
-        mcb->absorbNext();
+        MemoryControlBlock::absorbNext(mcb);
     }
 
     if (MemoryControlBlock *prev = mcb->prev(); prev != nullptr && !prev->busy()) {
         this->freeBlocks.pop(mcb);
-        prev->absorbNext();
+        MemoryControlBlock::absorbNext(prev);
         mcb = prev;
     }
     this->tryUnmap(mcb);
 }
 
 void Allocator::tryUnmap(MemoryControlBlock *mcb) {
-    std::uintptr_t from = mcb->firstInChunk()
+    std::uintptr_t from = mcb->prev() == nullptr
         // first block in chunk can be not page-aligned
         ? math::roundDown(reinterpret_cast<std::uintptr_t>(mcb), system::PAGE_SIZE())
         // we do not want to corrupt previous blocks in this page
-        : math::roundUp(mcb->data(), system::PAGE_SIZE());
+        : math::roundUp(MemoryControlBlock::data(mcb), system::PAGE_SIZE());
 
-    auto *next = mcb->next();
+    auto *next = MemoryControlBlock::next(mcb);
     std::uintptr_t to = next->endOfChunk()
         // end of chunk can be not page-aligned
-        ? math::roundUp(next->data(), system::PAGE_SIZE())
+        ? math::roundUp(MemoryControlBlock::data(next), system::PAGE_SIZE())
         // we do not want to corrunt next blocks in this page
         : math::roundDown(reinterpret_cast<std::uintptr_t>(next), system::PAGE_SIZE());
 
@@ -278,12 +277,12 @@ void Allocator::tryUnmap(MemoryControlBlock *mcb) {
 
     system::munmap(from, to - from);
 
-    if (std::ptrdiff_t diff = from - mcb->data(); diff >= 0) {
+    if (std::ptrdiff_t diff = from - MemoryControlBlock::data(mcb); diff >= 0) {
         // mcb was not first in chunk since moved foreward
         if (diff >= static_cast<std::ptrdiff_t>(MemoryControlBlock::spaceNeeded(1))) {
             // there is enough space for non-empty block
             mcb->setSize(diff - MemoryControlBlock::spaceNeeded(0));
-            auto *end = mcb->next();
+            auto *end = MemoryControlBlock::next(mcb);
             end->setPrev(mcb);
             end->makeEndOfChunk();
         } else {
@@ -305,12 +304,12 @@ void Allocator::tryUnmap(MemoryControlBlock *mcb) {
             auto *first = reinterpret_cast<MemoryControlBlock *>(to);
             first->markFree();
             first->setSize(diff - sizeof(MemoryControlBlock) - MemoryControlBlock::spaceNeeded(0));
-            first->makeFirstInChunk();
+            first->setPrev(nullptr);
             next->setPrev(first);
             this->freeBlocks.prepend(first);
         } else {
             // there is no space before next
-            next->makeFirstInChunk();
+            next->setPrev(nullptr);
         }
     }
 }

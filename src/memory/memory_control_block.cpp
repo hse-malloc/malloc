@@ -15,8 +15,8 @@ std::size_t MemoryControlBlock::spaceNeeded(std::size_t size) noexcept {
     return sizeof(MemoryControlBlock) + math::roundUp<std::size_t>(size, 2);
 }
 
-std::uintptr_t MemoryControlBlock::data() const noexcept {
-    return reinterpret_cast<std::uintptr_t>(this + 1);
+std::uintptr_t MemoryControlBlock::data(const MemoryControlBlock *mcb) noexcept {
+    return reinterpret_cast<std::uintptr_t>(mcb + 1);
 }
 
 std::size_t MemoryControlBlock::size() const noexcept {
@@ -37,26 +37,26 @@ bool MemoryControlBlock::fits(std::size_t size) const noexcept {
     return this->size() >= size;
 }
 
-MemoryControlBlock* MemoryControlBlock::split(std::size_t size) noexcept {
+MemoryControlBlock* MemoryControlBlock::split(MemoryControlBlock *mcb, std::size_t size) noexcept {
     if (size == 0) {
-        return this;
+        return mcb;
     }
     size = math::roundUp<std::size_t>(size, 2);
-    if (!this->fits(size + MemoryControlBlock::spaceNeeded(1))) {
-        return this;
+    if (!mcb->fits(size + MemoryControlBlock::spaceNeeded(1))) {
+        return mcb;
     }
 
-    std::size_t oldSize = this->size();
-    this->setSize(size);
+    std::size_t oldSize = mcb->size();
+    mcb->setSize(size);
 
-    MemoryControlBlock *right = this->next();
+    MemoryControlBlock *right = MemoryControlBlock::next(mcb);
     right->markFree();
     right->setSize(oldSize - size - sizeof(MemoryControlBlock));
-    right->setPrev(this); 
-    right->next()->setPrev(right);
+    right->setPrev(mcb); 
+    MemoryControlBlock::next(right)->setPrev(right);
 
-    right->setNextFree(this->nextFree());
-    right->setPrevFree(this); 
+    right->setNextFree(mcb->nextFree());
+    right->setPrevFree(mcb); 
  
     return right;
 }
@@ -90,15 +90,15 @@ void MemoryControlBlock::setPrev(MemoryControlBlock *prev) noexcept {
     this->prev_ = prev;
 }
 
-MemoryControlBlock *MemoryControlBlock::next() const noexcept {
-    return reinterpret_cast<MemoryControlBlock *>(this->data() + this->size());
+MemoryControlBlock *MemoryControlBlock::next(const MemoryControlBlock *mcb) noexcept {
+    return reinterpret_cast<MemoryControlBlock *>(MemoryControlBlock::data(mcb) + mcb->size());
 }
 
-void MemoryControlBlock::absorbNext() noexcept {
-    MemoryControlBlock *next = this->next();
+void MemoryControlBlock::absorbNext(MemoryControlBlock *mcb) noexcept {
+    MemoryControlBlock *next = MemoryControlBlock::next(mcb);
     next->popFree();
-    next->next()->setPrev(this);
-    this->grow(sizeof(MemoryControlBlock) + next->size());
+    MemoryControlBlock::next(next)->setPrev(mcb);
+    mcb->grow(sizeof(MemoryControlBlock) + next->size());
 }
 
 MemoryControlBlock* MemoryControlBlock::prevFree() const noexcept {
@@ -131,14 +131,6 @@ void MemoryControlBlock::popFree() noexcept {
     }
     this->setPrevFree(nullptr);
     this->setNextFree(nullptr);
-}
-
-bool MemoryControlBlock::firstInChunk() const noexcept {
-    return this->prev() == nullptr;
-}
-
-void MemoryControlBlock::makeFirstInChunk() noexcept {
-    this->setPrev(nullptr);
 }
 
 bool MemoryControlBlock::endOfChunk() const noexcept {

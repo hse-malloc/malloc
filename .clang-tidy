@@ -1,2 +1,2 @@
-Checks: "*,-llvmlibc-*,-modernize-use-trailing-return-type,-cppcoreguidelines-pro-type-reinterpret-cast,-cppcoreguidelines-pro-bounds-pointer-arithmetic"
+Checks: "*,-llvmlibc-*,-modernize-use-trailing-return-type,-cppcoreguidelines-pro-type-reinterpret-cast,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-fuchsia-overloaded-operator"
 FormatStyle: 'file'

@@ -32,19 +32,19 @@ class MemoryControlBlock {
     MemoryControlBlock *nextFree_;
   public:
     // fromDataPtr returns pointer to block which controls data pointed by given ptr
-    static MemoryControlBlock *fromDataPtr(std::uintptr_t) noexcept;
+    [[nodiscard]] static MemoryControlBlock *fromDataPtr(std::uintptr_t) noexcept;
 
     // spaceNeeded returns the number of bytes is needed for block with given size
-    static std::size_t spaceNeeded(std::size_t) noexcept;
+    [[nodiscard]] static std::size_t spaceNeeded(std::size_t) noexcept;
 
     // data returns a pointer to data which this block holds
-    std::uintptr_t data() const noexcept;
+    [[nodiscard]] static std::uintptr_t data(const MemoryControlBlock *mcb) noexcept;
 
     // size returns the size of data in bytes
-    std::size_t size() const noexcept;
+    [[nodiscard]] std::size_t size() const noexcept;
 
     // empty returns if there is zero space for data
-    bool empty() const noexcept;
+    [[nodiscard]] bool empty() const noexcept;
 
     // setSize sets size of block
     std::size_t setSize(std::size_t) noexcept;
@@ -53,16 +53,16 @@ class MemoryControlBlock {
     std::size_t grow(std::size_t) noexcept;
 
     // fits returns if there is enough space in block for given size
-    bool fits(std::size_t) const noexcept;
+    [[nodiscard]] bool fits(std::size_t) const noexcept;
 
     // split tries to split the block into two blocks,
     // where first of them has given size.
     // It returns pointer to second block in case of split,
     // or pointer to itself otherwise
-    [[nodiscard]] MemoryControlBlock* split(std::size_t) noexcept;
+    [[nodiscard]] static MemoryControlBlock* split(MemoryControlBlock *mcb, std::size_t) noexcept;
 
     // busy returns if the block is marked as busy
-    bool busy() const noexcept;
+    [[nodiscard]] bool busy() const noexcept;
 
     // setBusy sets busy bit
     void setBusy(bool) noexcept;
@@ -75,7 +75,7 @@ class MemoryControlBlock {
 
     // prev returns a pointer to previous block in same chunk.
     // If it is nullptr then it is the first block in chunk.
-    MemoryControlBlock *prev() const noexcept;
+    [[nodiscard]] MemoryControlBlock *prev() const noexcept;
 
     // setPrev sets the previous block in same chunk
     void setPrev(MemoryControlBlock *) noexcept;
@@ -83,15 +83,15 @@ class MemoryControlBlock {
     // next returns a pointer to next block in same chunk.
     // NOTE: it is always a non-nullptr pointer and we need
     // to check if it is a valid pointer before dereferencing it
-    MemoryControlBlock *next() const noexcept;
+    [[nodiscard]] static MemoryControlBlock *next(const MemoryControlBlock *mcb) noexcept;
 
     // absorbNext removes next block from chain of free blocks
     // and absorbs it
-    void absorbNext() noexcept;
+    static void absorbNext(MemoryControlBlock *mcb) noexcept;
 
     // prevFree returns a pointer to previous free block in chain of free blocks.
     // If it is nullptr then this is the first block in the chain
-    MemoryControlBlock *prevFree() const noexcept;
+    [[nodiscard]] MemoryControlBlock *prevFree() const noexcept;
 
     // setPrevFree sets previous free block in chain of free blocks
     // and sets its next free block to current
@@ -99,7 +99,7 @@ class MemoryControlBlock {
 
     // nextFree returns a pointer to next free block in chain of free blocks
     // If it is nullptr then this is the last block in the chain.
-    MemoryControlBlock *nextFree() const noexcept;
+    [[nodiscard]] MemoryControlBlock *nextFree() const noexcept;
 
     // setNextFree sets next free block in chain of free blocks
     // and sets its previous free block to current
@@ -109,14 +109,8 @@ class MemoryControlBlock {
     // and sets its previuos and next free blocks to nullptr
     void popFree() noexcept;
 
-    // first returns if the block is the first in chunk
-    bool firstInChunk() const noexcept;
-
-    // makeFirstInChunk marks block as first in chunk
-    void makeFirstInChunk() noexcept;
-
     // endOfChunk returns if block denotes the end of chunk
-    bool endOfChunk() const noexcept;
+    [[nodiscard]] bool endOfChunk() const noexcept;
 
     // makeEndOfChunk marks block as end of chunk
     void makeEndOfChunk() noexcept;

@@ -1,12 +1,12 @@
-#include <malloc.h>
 #include "math/math.h"
 #include "memory/allocator.h"
 
-#include <cstddef> // NOLINT(llvmlibc-restrict-system-libc-headers)
-#include <cstdint>
-#include <numeric>
 #include <cerrno>
+#include <cstddef>
+#include <cstdint>
+#include <malloc.h>
 #include <new>
+#include <numeric>
 
 
 namespace std { // NOLINT(cert-dcl58-cpp)
