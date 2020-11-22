@@ -1,153 +1,264 @@
 #include "allocator.h"
-#include "memory_control_block.h"
 #include "math/math.h"
+#include "memory_control_block.h"
 #include "system/system.h"
 
+#ifndef HSE_MALLOC_NO_RANDOM
+#include "random/random.h"
+#include <random>
+#endif
+
+#include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <random>
+#include <limits>
 
 namespace hse::memory {
 
-    std::mt19937 Allocator::randomGenerator(std::random_device{}());
+#ifndef HSE_MALLOC_NO_RANDOM
+sc69069_t Allocator::randomGenerator(std::random_device
+#ifdef HAVE_DEV_URANDOM
+                                                  ("/dev/urandom")
+#else
+                                                  {}
+#endif
+                                                    ());
+#endif
 
-	void Allocator::prependFree(MemoryControlBlock *mcb) noexcept {
-		mcb->setNextFree(this->firstFree);
-		this->firstFree = mcb;
-	}
-
-	MemoryControlBlock* Allocator::searchFit(std::size_t size) const noexcept {
-		MemoryControlBlock *mcb;
-		for (mcb = this->firstFree; mcb && !mcb->fits(size); mcb = mcb->nextFree());
-		return mcb;
-	}
-
-	void Allocator::popFree(MemoryControlBlock *mcb) noexcept {
-		if (this->firstFree == mcb)
-			this->firstFree = mcb->nextFree();
-		mcb->popFree();
-	}
-
-	std::uintptr_t Allocator::alloc(std::size_t size) {
-		return reinterpret_cast<std::uintptr_t>(this->allocBlock(size) + 1);
-	}
-
-	MemoryControlBlock* Allocator::allocBlock(std::size_t size) {
-		MemoryControlBlock *mcb = this->searchFit(size);
-		if (!mcb)
-			mcb = this->allocChunk(size);
-
-		// if there is a space to prepend padding block
-		if (mcb->fits(2 + MemoryControlBlock::spaceNeeded(size)))
-			mcb = mcb->split(std::uniform_int_distribution<std::size_t>
-					(1, mcb->size() - MemoryControlBlock::spaceNeeded(size))
-					(Allocator::randomGenerator));
-
-		// split block to not waste space
-		mcb->split(size);
-
-		this->popFree(mcb);
-		mcb->setBusy();
-		return mcb;
-	}
-
-	MemoryControlBlock* Allocator::allocChunk(std::size_t size) {
-		std::size_t spaceForEnd = MemoryControlBlock::spaceNeeded(0);
-		std::size_t spaceNeeded = MemoryControlBlock::spaceNeeded(size) + spaceForEnd;
-        std::size_t totalSize = math::roundUp(spaceNeeded, system::PAGE_SIZE);
-		
-		MemoryControlBlock *mcb = reinterpret_cast<MemoryControlBlock*>(system::mmap(totalSize));
-		mcb->setSize(totalSize - sizeof(MemoryControlBlock) - spaceForEnd);
-		this->prependFree(mcb);
-		MemoryControlBlock* end = mcb->next();
-		end->setPrev(mcb);
-		end->makeEndOfChunk();
-		return mcb;
-	}
-
-	void Allocator::free(std::uintptr_t ptr) {
-		this->freeBlock(reinterpret_cast<MemoryControlBlock*>(ptr) - 1);
-	}
-
-	void Allocator::freeBlock(MemoryControlBlock *mcb) {
-		mcb->setFree();
-		this->prependFree(mcb);
-		
-		if (MemoryControlBlock *next = mcb->next(); next && !next->busy()) {
-			if (this->firstFree == next)
-				this->firstFree = next->nextFree();
-			mcb->absorbNext();
-		}
-			
-		if (MemoryControlBlock *prev = mcb->prev(); prev && !prev->busy()) {	
-			if (this->firstFree == mcb)
-				this->firstFree = mcb->nextFree();
-			prev->absorbNext();
-			mcb = prev;
-		}
-		this->tryUnmap(mcb);
-	}
-
-	void Allocator::tryUnmap(MemoryControlBlock *mcb) {
-		std::uintptr_t from;
-		if (mcb->firstInChunk())
-			// first block in chunk can be not page-aligned
-			from = math::roundDown(reinterpret_cast<std::uintptr_t>(mcb), system::PAGE_SIZE);
-		else
-			// we do not want to corrupt previous blocks in this page
-			from = math::roundUp(mcb->data(), system::PAGE_SIZE);
-
-		MemoryControlBlock *next = mcb->next();
-		std::uintptr_t to;
-		if (next->endOfChunk())
-			// end of chunk can be not page-aligned
-			to = math::roundUp(next->data(), system::PAGE_SIZE);
-		else
-			// we do not want to corrunt next blocks in this page
-			to = math::roundDown(reinterpret_cast<std::uintptr_t>(next), system::PAGE_SIZE);
-		
-		if (to < from + system::PAGE_SIZE)
-			// there is no free pages to delete
-			return;
-		
-		// store block in case it is in pages we are to delete
-		MemoryControlBlock mcbStored = *mcb;
-
-		system::munmap(from, to - from);
-
-		if (std::ptrdiff_t diff = from - mcb->data(); diff >= 0) {
-			// mcb was not first in chunk since moved foreward
-			if (diff >= static_cast<std::ptrdiff_t>(MemoryControlBlock::spaceNeeded(1))) {
-				// there is enough space for non-empty block
-				mcb->setSize(diff - MemoryControlBlock::spaceNeeded(0));
-				MemoryControlBlock *end = mcb->next();
-				end->setPrev(mcb);
-				end->makeEndOfChunk();
-			} else {
-				// there is no space in current page
-				mcb->makeEndOfChunk();
-				this->popFree(mcb);
-			}
-		} else {
-			// block was removed with pages
-			if (this->firstFree == mcb)
-				this->firstFree = mcbStored.nextFree();
-			mcbStored.popFree();
-		}
-
-		if (std::ptrdiff_t diff = reinterpret_cast<std::uintptr_t>(next) - to; diff >= 0) {
-			// next was not last in chunk since moved backward
-			if (diff >= static_cast<std::ptrdiff_t>(MemoryControlBlock::spaceNeeded(1))) {
-				// there is enough space for non-empty block
-				MemoryControlBlock *first = reinterpret_cast<MemoryControlBlock*>(to);
-				first->setFree();
-				first->setSize(diff - sizeof(MemoryControlBlock) - MemoryControlBlock::spaceNeeded(0));
-				first->makeFirstInChunk();
-				next->setPrev(first);
-				this->prependFree(first);
-			} else
-				// there is no space before next
-				next->makeFirstInChunk();
-		}
-	}
+constexpr MCBPredicate auto Allocator::mcbFitsAlignedData(std::size_t size, std::size_t alignment) {
+    return [size, alignment](const MemoryControlBlock *mcb) noexcept {
+        return mcb->fits(Allocator::shiftToAlignData(mcb, alignment) + size);
+    };
 }
+
+std::uintptr_t Allocator::alloc(std::size_t size, std::size_t alignment) {
+    return MemoryControlBlock::data(this->allocBlock(size, alignment));
+}
+
+MemoryControlBlock* Allocator::allocBlock(std::size_t size, std::size_t alignment) {
+    auto *mcb = this->freeBlocks.findPred(mcbFitsAlignedData(size, alignment));
+    if (mcb == nullptr) {
+        mcb = this->allocChunk(size + alignment);
+    }
+
+    mcb = this->shiftForward(mcb, Allocator::shiftToAlignData(mcb, alignment));
+
+#ifndef HSE_MALLOC_NO_RANDOM
+    // check if there is space to prepend with padding block
+    if (mcb->fits(2 + math::roundUp(sizeof(MemoryControlBlock), alignment) + size)) {
+        auto timesAlignment = uniform_int_distribution<std::size_t>
+            (0, (mcb->size() - size) / alignment)
+            (Allocator::randomGenerator);
+        mcb = this->shiftForward(mcb, timesAlignment * alignment);
+    }
+#endif
+
+    mcb->markBusy();
+    this->split(mcb, size);
+    this->freeBlocks.pop(mcb);
+    return mcb;
+}
+
+std::uintptr_t Allocator::realloc(std::uintptr_t ptr, std::size_t size) { 
+    if (ptr == reinterpret_cast<std::uintptr_t>(nullptr)) {
+        // realloc(nullptr, size) is equal to alloc(size)
+        return this->alloc(size, 1);
+    }
+    return MemoryControlBlock::data(this->reallocBlock(MemoryControlBlock::fromDataPtr(ptr), size));
+}
+
+MemoryControlBlock *Allocator::reallocBlock(MemoryControlBlock *mcb, std::size_t size) {
+    if (mcb->fits(size)) {
+        mcb->markBusy();
+        this->split(mcb, size);
+        this->freeBlocks.pop(mcb);
+        return mcb;
+    }
+
+    // check if we can absorb next block and there will be enough space
+    if (auto *next = MemoryControlBlock::next(mcb);
+        !next->busy() && size <= mcb->size() + sizeof(MemoryControlBlock) + next->size()) {
+        this->absorbNext(mcb);
+        this->split(mcb, size); // mcb can be larger than we need after the absorption
+        return mcb;
+    }
+
+    auto *oldMCB = mcb;
+    mcb = this->allocBlock(size, 1);
+    std::copy(reinterpret_cast<std::uint16_t *>(MemoryControlBlock::data(oldMCB)),
+        reinterpret_cast<std::uint16_t *>(MemoryControlBlock::data(oldMCB) + oldMCB->size()),
+        reinterpret_cast<std::uint16_t *>(MemoryControlBlock::data(mcb)));
+    this->freeBlock(oldMCB);
+    return mcb;
+}
+
+MemoryControlBlock *Allocator::allocChunk(std::size_t size) {
+    std::size_t totalSize = math::roundUp(
+        sizeof(MemoryControlBlock) + size + sizeof(MemoryControlBlock),
+        system::PAGE_SIZE());
+
+    auto *mcb = reinterpret_cast<MemoryControlBlock *>(system::mmap(totalSize));
+    mcb->setSize(totalSize - sizeof(MemoryControlBlock) - sizeof(MemoryControlBlock));
+    this->freeBlocks.prepend(mcb);
+
+    auto *end = MemoryControlBlock::next(mcb);
+    end->setPrev(mcb);
+    end->markBusy();
+    end->setSize(0);
+
+    return mcb;
+}
+
+MemoryControlBlock* Allocator::shiftForward(MemoryControlBlock *mcb, std::size_t shift) noexcept {
+    if (shift == 0) {
+        return mcb;
+    }
+
+    if (shift >= sizeof(MemoryControlBlock) + 2) {
+        auto *right = this->split(mcb, shift - sizeof(MemoryControlBlock));
+
+        if (auto *prev = mcb->prev(); prev != nullptr && !prev->busy()) {
+            this->absorbNext(prev);
+        }
+
+        return right;
+    }
+
+    auto storedMCB = *mcb;
+    auto *shiftedMCB = reinterpret_cast<MemoryControlBlock*>(
+           reinterpret_cast<std::uint8_t*>(mcb) + shift);
+
+    if (this->freeBlocks.first() == mcb) {
+        this->freeBlocks.setFirst(shiftedMCB);
+    }
+
+    MemoryControlBlock::next(mcb)->setPrev(shiftedMCB);
+    auto *prev = mcb->prev();
+    if (prev != nullptr) {
+        prev->grow(shift);
+    }
+    shiftedMCB->setPrev(prev);
+    MemoryControlBlock::setPrevFree(shiftedMCB, storedMCB.prevFree());
+    MemoryControlBlock::setNextFree(shiftedMCB, storedMCB.nextFree());
+    shiftedMCB->setSize(storedMCB.size() - shift);
+    shiftedMCB->setBusy(storedMCB.busy());
+
+    return shiftedMCB;
+}
+
+MemoryControlBlock* Allocator::split(MemoryControlBlock *mcb, std::size_t size) noexcept {
+    if (size == 0) {
+        return mcb;
+    }
+
+    if (!mcb->fits(size + sizeof(MemoryControlBlock) + 2)) {
+        return mcb;
+    }
+
+    auto oldSize = mcb->size();
+    mcb->setSize(size);
+
+    auto *right = MemoryControlBlock::next(mcb);
+    right->setSize(oldSize - size - sizeof(MemoryControlBlock));
+    right->setPrev(mcb);
+
+    auto *next = MemoryControlBlock::next(right);
+    next->setPrev(right);
+    if (!next->busy()) {
+        this->absorbNext(right);
+    }
+
+    this->freeBlocks.prepend(right);
+    return right;
+}
+
+void Allocator::absorbNext(MemoryControlBlock *mcb) noexcept {
+    auto *next = MemoryControlBlock::next(mcb);
+    this->freeBlocks.pop(next);
+    MemoryControlBlock::next(next)->setPrev(mcb);
+    mcb->grow(sizeof(MemoryControlBlock) + next->size());
+}
+
+void Allocator::free(std::uintptr_t ptr) {
+    this->freeBlock(MemoryControlBlock::fromDataPtr(ptr));
+}
+
+void Allocator::freeBlock(MemoryControlBlock *mcb) {
+    mcb->markFree();
+    this->freeBlocks.prepend(mcb);
+
+    if (MemoryControlBlock *next = MemoryControlBlock::next(mcb); !next->busy()) {
+        this->absorbNext(mcb);
+    }
+
+    if (MemoryControlBlock *prev = mcb->prev(); prev != nullptr && !prev->busy()) {
+        mcb = prev;
+        this->absorbNext(mcb);
+    }
+    this->tryUnmap(mcb);
+}
+
+void Allocator::tryUnmap(MemoryControlBlock *mcb) {
+    std::uintptr_t from = mcb->prev() == nullptr
+        // first block in chunk can be not page-aligned
+        ? math::roundDown(reinterpret_cast<std::uintptr_t>(mcb), system::PAGE_SIZE())
+        // we do not want to corrupt previous blocks in this page
+        : math::roundUp(MemoryControlBlock::data(mcb), system::PAGE_SIZE());
+
+    auto *next = MemoryControlBlock::next(mcb);
+    std::uintptr_t to = next->busy() && next->empty()
+        // end of chunk can be not page-aligned
+        ? math::roundUp(MemoryControlBlock::data(next), system::PAGE_SIZE())
+        // we do not want to corrunt next blocks in this page
+        : math::roundDown(reinterpret_cast<std::uintptr_t>(next), system::PAGE_SIZE());
+
+    if (to < from + system::PAGE_SIZE()) {
+        // there is no free pages to delete
+        return;
+    }
+
+    if (std::ptrdiff_t diff = from - MemoryControlBlock::data(mcb); diff >= 0) {
+        // mcb is not the first in chunk since moved foreward
+        if (diff >= static_cast<std::ptrdiff_t>(sizeof(MemoryControlBlock) + 2)) {
+            // there is enough space for non-empty block
+            mcb->setSize(diff - sizeof(MemoryControlBlock));
+            auto *end = MemoryControlBlock::next(mcb);
+            end->setPrev(mcb);
+            end->markBusy();
+            end->setSize(0);
+        } else {
+            // there is no space in current page
+            mcb->markBusy();
+            mcb->setSize(0);
+            this->freeBlocks.pop(mcb);
+        }
+    } else { // block will be removed with pages
+        this->freeBlocks.pop(mcb);
+    }
+
+    if (std::ptrdiff_t diff = reinterpret_cast<std::uintptr_t>(next) - to; diff >= 0) {
+        // next is not the last in chunk since moved backward
+        if (diff >= static_cast<std::ptrdiff_t>(sizeof(MemoryControlBlock) + 2)) {
+            // there is enough space for non-empty block
+            auto *first = reinterpret_cast<MemoryControlBlock *>(to);
+            first->markFree();
+            first->setSize(diff - sizeof(MemoryControlBlock) - sizeof(MemoryControlBlock));
+            first->setPrev(nullptr);
+            next->setPrev(first);
+            this->freeBlocks.prepend(first);
+        } else {
+            // there is no space before next
+            next->setPrev(nullptr);
+        }
+    }
+
+    system::munmap(from, to - from);
+}
+
+std::size_t Allocator::shiftToAlignData(const MemoryControlBlock *mcb, std::size_t alignment) noexcept {
+    auto data = MemoryControlBlock::data(mcb);
+    return math::roundUp(data, alignment) - data;
+}
+
+} // namespace hse::memory

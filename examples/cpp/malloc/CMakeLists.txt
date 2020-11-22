@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
-project(malloc_example
+project(malloc_example_cpp
 	VERSION 1.0.0
-	DESCRIPTION "example project using malloc()"
+        DESCRIPTION "example c++ project using malloc()"
 	LANGUAGES CXX)
 
 add_executable(${PROJECT_NAME}
