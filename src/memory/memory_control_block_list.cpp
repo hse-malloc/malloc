@@ -4,18 +4,37 @@
 namespace hse::memory {
 
 FreeMemoryControlBlockList::FreeMemoryControlBlockList() noexcept :
-    first(nullptr) {}
+    first_(nullptr) {}
+
+MemoryControlBlock *FreeMemoryControlBlockList::first() const noexcept {
+    return this->first_;
+}
+
+void FreeMemoryControlBlockList::setFirst(MemoryControlBlock *mcb) noexcept {
+    if ((this->first_ = mcb) == nullptr) {
+        return;
+    }
+    MemoryControlBlock::setPrevFree(mcb, nullptr);
+}
 
 void FreeMemoryControlBlockList::prepend(MemoryControlBlock *mcb) noexcept {
-   mcb->setNextFree(this->first);
-   this->first = mcb;
+    mcb->markFree();
+    MemoryControlBlock::setNextFree(mcb, this->first());
+    this->setFirst(mcb);
 }
 
 void FreeMemoryControlBlockList::pop(MemoryControlBlock *mcb) noexcept {
-    if (this->first == mcb) {
-        this->first = mcb->nextFree();
+    if (this->first() == mcb) {
+        this->setFirst(mcb->nextFree());
     }
-    mcb->popFree();
+
+    if (auto *prev = mcb->prevFree(); prev != nullptr) {
+        MemoryControlBlock::setNextFree(prev, mcb->nextFree());
+    } else if (auto *next = mcb->nextFree(); next != nullptr) {
+        MemoryControlBlock::setPrevFree(next, prev);
+    }
+    MemoryControlBlock::setPrevFree(mcb, nullptr);
+    MemoryControlBlock::setNextFree(mcb, nullptr);
 }
 
 } // namespace hse::memory

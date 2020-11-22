@@ -32,10 +32,7 @@ class MemoryControlBlock {
     MemoryControlBlock *nextFree_;
   public:
     // fromDataPtr returns pointer to block which controls data pointed by given ptr
-    [[nodiscard]] static MemoryControlBlock *fromDataPtr(std::uintptr_t) noexcept;
-
-    // spaceNeeded returns the number of bytes is needed for block with given size
-    [[nodiscard]] static std::size_t spaceNeeded(std::size_t) noexcept;
+    static MemoryControlBlock *fromDataPtr(std::uintptr_t) noexcept;
 
     // data returns a pointer to data which this block holds
     [[nodiscard]] static std::uintptr_t data(const MemoryControlBlock *mcb) noexcept;
@@ -46,11 +43,13 @@ class MemoryControlBlock {
     // empty returns if there is zero space for data
     [[nodiscard]] bool empty() const noexcept;
 
-    // setSize sets size of block
-    std::size_t setSize(std::size_t) noexcept;
+    // setSize sets size of block.
+    // NOTE: size should be multiple of 2
+    void setSize(std::size_t) noexcept;
 
     // grow increases size of block by given value
-    std::size_t grow(std::size_t) noexcept;
+    // NOTE: size should be multiple of 2
+    void grow(std::size_t) noexcept;
 
     // fits returns if there is enough space in block for given size
     [[nodiscard]] bool fits(std::size_t) const noexcept;
@@ -59,7 +58,7 @@ class MemoryControlBlock {
     // where first of them has given size.
     // It returns pointer to second block in case of split,
     // or pointer to itself otherwise
-    [[nodiscard]] static MemoryControlBlock* split(MemoryControlBlock *mcb, std::size_t) noexcept;
+    [[nodiscard]] static MemoryControlBlock* split(MemoryControlBlock *mcb, std::size_t);
 
     // busy returns if the block is marked as busy
     [[nodiscard]] bool busy() const noexcept;
@@ -85,17 +84,13 @@ class MemoryControlBlock {
     // to check if it is a valid pointer before dereferencing it
     [[nodiscard]] static MemoryControlBlock *next(const MemoryControlBlock *mcb) noexcept;
 
-    // absorbNext removes next block from chain of free blocks
-    // and absorbs it
-    static void absorbNext(MemoryControlBlock *mcb) noexcept;
-
     // prevFree returns a pointer to previous free block in chain of free blocks.
     // If it is nullptr then this is the first block in the chain
     [[nodiscard]] MemoryControlBlock *prevFree() const noexcept;
 
     // setPrevFree sets previous free block in chain of free blocks
     // and sets its next free block to current
-    void setPrevFree(MemoryControlBlock *) noexcept;
+    static void setPrevFree(MemoryControlBlock *mcb, MemoryControlBlock *prev) noexcept;
 
     // nextFree returns a pointer to next free block in chain of free blocks
     // If it is nullptr then this is the last block in the chain.
@@ -103,17 +98,7 @@ class MemoryControlBlock {
 
     // setNextFree sets next free block in chain of free blocks
     // and sets its previous free block to current
-    void setNextFree(MemoryControlBlock *) noexcept;
-
-    // popFree extracts current block from chain of free blocks
-    // and sets its previuos and next free blocks to nullptr
-    void popFree() noexcept;
-
-    // endOfChunk returns if block denotes the end of chunk
-    [[nodiscard]] bool endOfChunk() const noexcept;
-
-    // makeEndOfChunk marks block as end of chunk
-    void makeEndOfChunk() noexcept;
+    static void setNextFree(MemoryControlBlock *mcb, MemoryControlBlock *next) noexcept;
 };
 
 } // namespace hse::memory

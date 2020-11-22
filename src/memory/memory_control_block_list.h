@@ -40,12 +40,20 @@ MCBPredicate auto operator||(P1 p1, P2 p2) {
 // concept MCBMetric = std::is_nothrow_invocable_r_v<std::size_t, T, const MemoryControlBlock*>;
 
 class FreeMemoryControlBlockList {
-  public:
-    MemoryControlBlock *first;
+  private:
+    MemoryControlBlock *first_;
 
+  public:
     FreeMemoryControlBlockList() noexcept;
-    
-    // prependFree prepends given block to start of chain of free blocks
+
+    // first returns pointer to first block in chain of free blocks.
+    // If it is nullptr then the chain is empty
+    [[nodiscard]] MemoryControlBlock* first() const noexcept;
+
+    // setFirst sets first free block to given one.
+    void setFirst(MemoryControlBlock *) noexcept;
+
+    // prepend prepends given block to start of chain of free blocks
     void prepend(MemoryControlBlock *) noexcept;
 
     // popFree extracts given block from chain of free blocks
@@ -57,7 +65,7 @@ class FreeMemoryControlBlockList {
     // It returns nullptr if there is no such block
     template<MCBPredicate P>
     MemoryControlBlock* findPred(P pred) const noexcept {
-      for (auto *mcb = this->first; mcb != nullptr; mcb = mcb->nextFree()) {
+      for (auto *mcb = this->first(); mcb != nullptr; mcb = mcb->nextFree()) {
         if (pred(mcb)) {
           return mcb;
         }

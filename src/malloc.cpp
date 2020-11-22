@@ -18,7 +18,6 @@ namespace hse {
 
 static hse::memory::Allocator _allocator{};
 
-
 void *malloc(std::size_t size) noexcept {
     DEBUG_LOG("MALLOC");
     if (size == 0) {
@@ -26,8 +25,7 @@ void *malloc(std::size_t size) noexcept {
     }
 
     try {
-        // NOLINTNEXTLINT(cppcoreguidelines-pro-type-reinterpret-cast])
-        return reinterpret_cast<void *>(_allocator.alloc(size));
+        return reinterpret_cast<void *>(_allocator.alloc(math::roundUp(size, 2), 1));
     } catch (...) {
         return nullptr;
     }
@@ -56,8 +54,8 @@ void *calloc(std::size_t count, std::size_t size) noexcept {
         auto *ptr = hse::malloc(numBytes);
 
         std::iota(reinterpret_cast<std::uint8_t *>(ptr),
-             reinterpret_cast<std::uint8_t *>(ptr) + numBytes,
-             0);
+            reinterpret_cast<std::uint8_t *>(ptr) + numBytes,
+            0);
         return ptr;
     } catch (...) {
         return nullptr;
@@ -71,7 +69,7 @@ void *realloc(void *ptr, std::size_t size) noexcept {
     }
 
     try {
-        return reinterpret_cast<void *>(_allocator.realloc(reinterpret_cast<std::uintptr_t>(ptr), size));
+        return reinterpret_cast<void *>(_allocator.realloc(reinterpret_cast<std::uintptr_t>(ptr), math::roundUp(size, 2)));
     } catch (...) {
         return nullptr;
     }
