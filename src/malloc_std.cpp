@@ -38,7 +38,7 @@ void *operator new(std::size_t size) {
 }
 
 void *operator new(std::size_t size, std::align_val_t al) {
-    void *ptr = std::malloc(size);
+    void *ptr = hse::aligned_alloc(static_cast<std::size_t>(al), size);;
     if (ptr == nullptr) {
         throw std::bad_alloc{};
     }

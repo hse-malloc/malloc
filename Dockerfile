@@ -56,3 +56,35 @@ FROM build AS test
 WORKDIR build
 
 ENTRYPOINT ["ctest", "--output-on-failure"]
+
+
+FROM build-env AS build-example-c
+
+WORKDIR /root/malloc/build
+
+COPY --from=build /root/malloc/build . 
+
+RUN cmake --install .
+
+WORKDIR /root/example-c
+
+#COPY --from=build /usr/local/lib/libmalloc.a /usr/local/lib/libhse_malloc.a /use/local/lib/
+#COPY --from=build /usr/local/include/malloc/malloc.h /usr/local/include/malloc/
+#COPY --from=build /usr/local/lib/cmake/malloc/* /usr/local/lib/cmake/malloc/
+
+RUN ls /usr/local/lib 
+RUN ls /usr/local/include 
+RUN ls /usr/local/lib/cmake/
+
+COPY examples/c .
+
+RUN cmake \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_C_COMPILER="clang-11" \
+    -DCMAKE_CXX_COMPILER="clang++-11" \
+    -DCMAKE_CXX_CLANG_TIDY="clang-tidy-11" \
+    -DCMAKE_EXE_LINKER_FLAGS="-v" \
+    -B build \
+  && cmake --build build -v 
+
+CMD ["build/malloc_example_c"]

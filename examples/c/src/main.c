@@ -1,4 +1,4 @@
-#include <malloc/malloc.h>
+#include <malloc.h>
 #include <stdio.h>
 
 int main() {
