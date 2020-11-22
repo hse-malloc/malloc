@@ -19,7 +19,7 @@
 
 namespace std { // NOLINT(cert-dcl58-cpp)
 extern "C" {
-#endif // __cplusplus
+#endif              // __cplusplus
 #include <stddef.h> // NOLINT(llvmlibc-restrict-system-libc-headers)
 
 __NODISCARD__ void *malloc(size_t) __NOEXCEPT__;
