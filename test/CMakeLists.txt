@@ -13,10 +13,10 @@ target_include_directories(${PROJECT_NAME}_test PRIVATE
 
 target_compile_options(${PROJECT_NAME}_test PRIVATE
 	$<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
-                -Wall
-                -Wextra
-                -Wpedantic
-        >
+        -Wall
+        -Wextra
+        -Wpedantic
+    >
 )
 
 find_package(Catch2 QUIET)

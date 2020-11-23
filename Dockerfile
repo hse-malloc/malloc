@@ -44,12 +44,11 @@ RUN cmake \
     -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_CXX_COMPILER="clang++-11" \
     -DCMAKE_CXX_CLANG_TIDY="clang-tidy-11" \
-    -DCMAKE_CXX_FLAGS="-nostdinc++ -I/lib/llvm-11/include/c++/v1 -L/usr/llvm-11/lib -Wl,-rpath,/lib/llvm-11/lib -fsanitize=address" \
+    -DCMAKE_CXX_FLAGS="-I/lib/llvm-11/include/c++/v1 -L/usr/llvm-11/lib -Wl,-rpath,/lib/llvm-11/lib" \
     -DCMAKE_EXE_LINKER_FLAGS="-v" \
     -B build \
   && cmake --build build -v \
   && cmake --install build
-
 
 FROM build AS test
 
@@ -60,21 +59,12 @@ ENTRYPOINT ["ctest", "--output-on-failure"]
 
 FROM build-env AS build-example-c
 
-WORKDIR /root/malloc/build
-
-COPY --from=build /root/malloc/build . 
-
-RUN cmake --install .
+COPY --from=build /usr/local/lib/libmalloc.a /usr/local/lib/libmalloc.a
+COPY --from=build /usr/local/lib/libhse_malloc.a /usr/local/lib/libhse_malloc.a
+COPY --from=build /usr/local/include/malloc/malloc.h /usr/local/include/malloc/
+COPY --from=build /usr/local/lib/cmake/malloc/* /usr/local/lib/cmake/malloc/
 
 WORKDIR /root/example-c
-
-#COPY --from=build /usr/local/lib/libmalloc.a /usr/local/lib/libhse_malloc.a /use/local/lib/
-#COPY --from=build /usr/local/include/malloc/malloc.h /usr/local/include/malloc/
-#COPY --from=build /usr/local/lib/cmake/malloc/* /usr/local/lib/cmake/malloc/
-
-RUN ls /usr/local/lib 
-RUN ls /usr/local/include 
-RUN ls /usr/local/lib/cmake/
 
 COPY examples/c .
 
@@ -83,6 +73,7 @@ RUN cmake \
     -DCMAKE_C_COMPILER="clang-11" \
     -DCMAKE_CXX_COMPILER="clang++-11" \
     -DCMAKE_CXX_CLANG_TIDY="clang-tidy-11" \
+    -DCMAKE_CXX_FLAGS="-I/lib/llvm-11/include/c++/v1 -L/usr/llvm-11/lib -Wl,-rpath,/lib/llvm-11/lib" \
     -DCMAKE_EXE_LINKER_FLAGS="-v" \
     -B build \
   && cmake --build build -v 
