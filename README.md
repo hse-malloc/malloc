@@ -1,6 +1,6 @@
 # malloc
 
-> Custom implementation of standard C and C++ library dynamic memory management functions with [address randomization](#randomization):
+> [Randomized](#randomization) custom implementation of standard C and C++ library dynamic memory management functions:
 > * [`std::malloc`](https://en.cppreference.com/w/cpp/memory/c/malloc)
 > * [`std::calloc`](https://en.cppreference.com/w/cpp/memory/c/calloc)
 > * [`std::realloc`](https://en.cppreference.com/w/cpp/memory/c/realloc)
@@ -79,8 +79,8 @@ $ ctest --output-on-failure
 
 Available targets:
 * `test`: tests (default)
-* `example-c`: usage example in C
-* `example-cpp`: usage example in C++
+* `example-c`: usage example in C using [`malloc`](https://en.cppreference.com/w/c/memory/malloc)
+* `example-cpp`: usage example in C++ using [`std::malloc`](https://en.cppreference.com/w/cpp/memory/c/malloc)
 * `example-cpp-new`: usage example in C++ using [`new`](https://en.cppreference.com/w/cpp/memory/new/operator_new) and [`delete`](https://en.cppreference.com/w/cpp/memory/new/operator_delete) operators
 
 ```sh
