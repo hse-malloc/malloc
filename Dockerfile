@@ -44,8 +44,8 @@ RUN cmake \
     -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_CXX_COMPILER="clang++-11" \
     -DCMAKE_CXX_CLANG_TIDY="clang-tidy-11" \
-    -DCMAKE_CXX_FLAGS="-I/lib/llvm-11/include/c++/v1 -L/usr/llvm-11/lib -Wl,-rpath,/lib/llvm-11/lib" \
-    -DCMAKE_EXE_LINKER_FLAGS="-v" \
+    -DCMAKE_CXX_FLAGS="-I/lib/llvm-11/include/c++/v1" \
+    -DCMAKE_EXE_LINKER_FLAGS="-L/usr/llvm-11/lib -Wl,-rpath,/lib/llvm-11/lib -v" \
     -B build \
   && cmake --build build -v \
   && cmake --install build
@@ -73,8 +73,8 @@ RUN cmake \
     -DCMAKE_C_COMPILER="clang-11" \
     -DCMAKE_CXX_COMPILER="clang++-11" \
     -DCMAKE_CXX_CLANG_TIDY="clang-tidy-11" \
-    -DCMAKE_CXX_FLAGS="-I/lib/llvm-11/include/c++/v1 -L/usr/llvm-11/lib -Wl,-rpath,/lib/llvm-11/lib" \
-    -DCMAKE_EXE_LINKER_FLAGS="-v" \
+    -DCMAKE_CXX_FLAGS="-I/lib/llvm-11/include/c++/v1" \
+    -DCMAKE_EXE_LINKER_FLAGS="-L/usr/llvm-11/lib -Wl,-rpath,/lib/llvm-11/lib -v" \
     -B build \
   && cmake --build build -v 
 
