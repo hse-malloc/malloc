@@ -64,7 +64,7 @@ $ cmake --install build
 >   ```sh
 >   -DCMAKE_BUILD_TYPE=Debug
 >   ```
-> * Pass [`libc++ >= 11.0.0`](https://libcxx.llvm.org/docs/UsingLibcxx.html) headers and library location:
+> * [Pass](https://libcxx.llvm.org/docs/UsingLibcxx.html) [`libc++ >= 11.0.0`](https://libcxx.llvm.org/docs/UsingLibcxx.html) headers and library location:
 >   ```sh
 >   -DCMAKE_CXX_FLAGS="-I<libcxx-install-prefix>/include/c++/v1" \
 >   -DCMAKE_EXE_LINKER_FLAGS="-L<libcxx-install-prefix>/lib -Wl,-rpath,<libcxx-install-prefix>/lib"
