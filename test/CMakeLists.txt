@@ -4,10 +4,6 @@ add_executable(${PROJECT_NAME}_test
 
 set_target_properties(${PROJECT_NAME}_test PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_features(${PROJECT_NAME}_test PRIVATE cxx_std_20)
-target_link_options(${PROJECT_NAME}_test PRIVATE
-	-stdlib=libc++
-	-lc++abi
-)
 
 target_link_libraries(${PROJECT_NAME}_test PRIVATE hse_${PROJECT_NAME})
 
@@ -16,19 +12,11 @@ target_include_directories(${PROJECT_NAME}_test PRIVATE
 )
 
 target_compile_options(${PROJECT_NAME}_test PRIVATE
-	-stdlib=libc++
 	$<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
-                -Wall
-                -Wextra
-                -Wpedantic
-	>
-	PUBLIC
-	$<$<CXX_COMPILER_ID:Clang,AppleClang>:
-		$<$<CONFIG:DEBUG>:
-			-fprofile-instr-generate
-			-fcoverage-mapping
-		>
-	>
+        -Wall
+        -Wextra
+        -Wpedantic
+    >
 )
 
 find_package(Catch2 QUIET)

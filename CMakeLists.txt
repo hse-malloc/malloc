@@ -7,8 +7,8 @@ project(malloc
 )
 
 add_library(hse_${PROJECT_NAME}
-    src/malloc.cpp
-    src/malloc.h
+	src/malloc.cpp
+	src/malloc.h
 	src/system/system.cpp
 	src/system/system.h
 	src/memory/memory_control_block.cpp
@@ -19,8 +19,9 @@ add_library(hse_${PROJECT_NAME}
 	src/memory/allocator.h
 	src/random/random.h
 	src/math/math.h
-        src/concepts/numbers.h
+	src/concepts/numbers.h
 )
+
 set_target_properties(hse_${PROJECT_NAME} PROPERTIES
     CXX_EXTENSIONS OFF
     EXPORT_NAME HSE_Malloc
@@ -41,20 +42,25 @@ target_include_directories(hse_${PROJECT_NAME}
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 target_compile_features(hse_${PROJECT_NAME} PRIVATE cxx_std_20)
-target_compile_options(hse_${PROJECT_NAME} PRIVATE
-	-stdlib=libc++
-	$<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
-                -Wall
-                -Wextra
-                -Wpedantic
-    >
+target_compile_options(hse_${PROJECT_NAME}
 	PUBLIC
-	$<$<CXX_COMPILER_ID:Clang,AppleClang>:
-		$<$<CONFIG:DEBUG>:
-			-fprofile-instr-generate
-			-fcoverage-mapping
+		$<$<CXX_COMPILER_ID:Clang>:
+			-nostdinc++
 		>
-	>
+	PRIVATE
+		$<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
+			-Wall
+			-Wextra
+			-Wpedantic
+		>
+)
+
+target_link_options(hse_${PROJECT_NAME}
+	INTERFACE
+		$<$<CXX_COMPILER_ID:Clang>:
+			-stdlib=libc++
+			-lc++abi
+		>
 )
 
 add_library(${PROJECT_NAME}
@@ -71,8 +77,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
 set_target_properties(${PROJECT_NAME} PROPERTIES
 	INCLUDE_DIRECTORIES $<TARGET_PROPERTY:hse_${PROJECT_NAME},INCLUDE_DIRECTORIES>
 	COMPILE_FEATURES $<TARGET_PROPERTY:hse_${PROJECT_NAME},COMPILE_FEATURES>
-	COMPILE_OPTIONS $<TARGET_PROPERTY:hse_${PROJECT_NAME},COMPILE_OPTIONS>
-	LINK_OPTIONS $<TARGET_PROPERTY:hse_${PROJECT_NAME},LINK_OPTIONS>
+	COMPILE_OPTIONS $<TARGET_PROPERTY:hse_${PROJECT_NAME},INTERFACE_COMPILE_OPTIONS>
+	LINK_OPTIONS $<TARGET_PROPERTY:hse_${PROJECT_NAME},INTERFACE_LINK_OPTIONS>
 	EXPORT_NAME Malloc
 	PUBLIC_HEADER
 		include/malloc.h
