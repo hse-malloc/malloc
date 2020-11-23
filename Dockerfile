@@ -50,6 +50,7 @@ RUN cmake \
   && cmake --build build -v \
   && cmake --install build
 
+
 FROM build AS test
 
 WORKDIR build
@@ -57,14 +58,16 @@ WORKDIR build
 ENTRYPOINT ["ctest", "--output-on-failure"]
 
 
-FROM build-env AS build-example-c
+FROM build-env AS malloc-installed
 
-COPY --from=build /usr/local/lib/libmalloc.a /usr/local/lib/libmalloc.a
-COPY --from=build /usr/local/lib/libhse_malloc.a /usr/local/lib/libhse_malloc.a
-COPY --from=build /usr/local/include/malloc/malloc.h /usr/local/include/malloc/
+COPY --from=build /usr/local/lib/lib*malloc.a /usr/local/lib/
+COPY --from=build /usr/local/include/malloc/* /usr/local/include/malloc/
 COPY --from=build /usr/local/lib/cmake/malloc/* /usr/local/lib/cmake/malloc/
 
-WORKDIR /root/example-c
+
+FROM malloc-installed AS example-c
+
+WORKDIR /root/malloc/examples/c
 
 COPY examples/c .
 
@@ -79,3 +82,41 @@ RUN cmake \
   && cmake --build build -v 
 
 CMD ["build/malloc_example_c"]
+
+
+FROM malloc-installed AS example-cpp
+
+WORKDIR /root/malloc/examples/cpp/malloc
+
+COPY examples/cpp/malloc .
+
+RUN cmake \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_CXX_COMPILER="clang++-11" \
+    -DCMAKE_CXX_CLANG_TIDY="clang-tidy-11" \
+    -DCMAKE_CXX_FLAGS="-I/lib/llvm-11/include/c++/v1" \
+    -DCMAKE_EXE_LINKER_FLAGS="-L/usr/llvm-11/lib -Wl,-rpath,/lib/llvm-11/lib -v" \
+    -B build \
+  && cmake --build build -v 
+
+CMD ["build/malloc_example_cpp"]
+
+
+FROM malloc-installed AS example-cpp-new
+
+WORKDIR /root/malloc/examples/cpp/new
+
+COPY examples/cpp/new .
+
+RUN cmake \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_CXX_COMPILER="clang++-11" \
+    -DCMAKE_CXX_CLANG_TIDY="clang-tidy-11" \
+    -DCMAKE_CXX_FLAGS="-I/lib/llvm-11/include/c++/v1" \
+    -DCMAKE_EXE_LINKER_FLAGS="-L/usr/llvm-11/lib -Wl,-rpath,/lib/llvm-11/lib -v" \
+    -B build \
+  && cmake --build build -v 
+
+CMD ["build/malloc_example_cpp_new"]
+
+FROM test

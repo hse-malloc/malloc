@@ -1,4 +1,3 @@
-build/
-examples/c/build
-examples/cpp/build
 Dockerfile
+**/build/
+
