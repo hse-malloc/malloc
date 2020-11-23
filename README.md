@@ -1,6 +1,6 @@
 # malloc
 
-> [Randomized](#randomization) custom implementation of standard C and C++ library dynamic memory management functions:
+> [Randomized](#randomization) implementation of standard C and C++ library dynamic memory management functions:
 > * [`std::malloc`](https://en.cppreference.com/w/cpp/memory/c/malloc)
 > * [`std::calloc`](https://en.cppreference.com/w/cpp/memory/c/calloc)
 > * [`std::realloc`](https://en.cppreference.com/w/cpp/memory/c/realloc)
