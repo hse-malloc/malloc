@@ -1,31 +1,57 @@
 # malloc
 
-## Requirements
+> Custom implementation of standard C and C++ library dynamic memory management functions with [address randomization](#randomization):
+> * [`std::malloc`](https://en.cppreference.com/w/cpp/memory/c/malloc)
+> * [`std::calloc`](https://en.cppreference.com/w/cpp/memory/c/calloc)
+> * [`std::realloc`](https://en.cppreference.com/w/cpp/memory/c/realloc)
+> * [`std::aligned_alloc`](https://en.cppreference.com/w/cpp/memory/c/aligned_alloc)
+> * [`std::free`](https://en.cppreference.com/w/cpp/memory/c/free)
+> * [`operator new`](https://en.cppreference.com/w/cpp/memory/new/operator_new)
+> * [`operator delete`](https://en.cppreference.com/w/cpp/memory/new/operator_delete)
+> 
+> See usage examples in [examples](examples) directory.
+
+## Build & Install
+
+### Requirements
 
 * [`clang++ >= 10.0.0`](https://clang.llvm.org)
 * [`libc++ >= 11.0.0`](https://libcxx.llvm.org/docs/UsingLibcxx.html)
 * [`cmake >= 3.18`](https://cmake.org)
 * [`make`](https://www.gnu.org/software/make)
 
-
-## Generate
+### Clone
 
 ```sh
-$ git clone https://github.com/hse-malloc/malloc.git && cd malloc
+$ git clone https://github.com/hse-malloc/malloc.git
+$ cd malloc
+```
 
+### Generate
+
+```sh
 $ cmake \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_BUILD_TYPE=Release \
-# -DHSE_MALLOC_NO_RANDOM=TRUE # disable randomization
   -B build
 ```
-## Build
+
+#### Randomization
+
+By default, address randomization is **enabled**.  
+You can disable it by passing following argument while [generation](#generate):
+
+```sh
+-DHSE_MALLOC_NO_RANDOM=TRUE
+```
+
+### Build
 
 ```sh
 $ cmake --build build
 ```
 
-## Install
+### Install
 
 ```sh
 $ cmake --install build
@@ -49,14 +75,16 @@ $ cd build
 $ ctest --output-on-failure
 ```
 
-### Usage
+### Docker
 
-See examples in [examples](examples) folder.
-
-## Docker
+Available targets:
+* `test`: tests (default)
+* `example-c`: usage example in C
+* `example-cpp`: usage example in C++
+* `example-cpp-new`: usage example in C++ using [`new`](https://en.cppreference.com/w/cpp/memory/new/operator_new) and [`delete`](https://en.cppreference.com/w/cpp/memory/new/operator_delete) operators
 
 ```sh
-$ docker build -t malloc .
+$ docker build --target <TARGET> -t malloc_<TARGET> .
 
-$ docker run --rm malloc
+$ docker run --rm malloc_<TARGET>
 ```
