@@ -2,9 +2,10 @@
 
 ## Requirements
 
-* `clang`
-* `make`
-* `cmake`
+* [`clang++`](https://clang.llvm.org)
+* [`libc++`](https://libcxx.llvm.org/docs/UsingLibcxx.html)
+* [`make`](https://www.gnu.org/software/make)
+* [`cmake`](https://cmake.org)
 
 
 ## Build
@@ -14,15 +15,12 @@ $ git clone https://github.com/hse-malloc/malloc.git && cd malloc
 
 $ cmake \
   -DCMAKE_CXX_COMPILER=clang++ \
-  -DCMAKE_BUILD_TYPE=Debug \
-  -DCMAKE_CXX_CLANG_TIDY="clang-tidy" \
-  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+# -DHSE_MALLOC_NO_RANDOM=TRUE # disable randomization
   -B build
 
 $ cmake --build build
 ```
-
-It is possible to disable randomization by setting the `-DHSE_MALLOC_NO_RANDOM=TRUE` 
 
 ## Install
 
@@ -36,17 +34,7 @@ $ cmake --install build
 
 ```sh
 $ cd build
-$ ctest
-```
-
-### Coverage analysis
-
-```sh
-$ cd build/test
-$ ./malloc_test 1>/dev/null 2>/dev/null && \
- llvm-profdata merge -o output.profdata default.profraw && \
- llvm-cov report malloc_test --instr-profile=output.profdata && \
- llvm-cov show malloc_test --instr-profile=output.profdata -format=html > report.html
+$ ctest --output-on-failure
 ```
 
 ## Docker
