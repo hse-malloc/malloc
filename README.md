@@ -36,10 +36,24 @@ $ cmake \
   -B build
 ```
 
+#### Shared library
+
+Cmake builds libraries as **static** by default. To build shared libraries pass while [generation](#generate):
+
+```sh
+-DBUILD_SHARED_LIBS=On
+```
+
+Then after [build](#build) you can use `LD_PRELOAD` to make other program to use [malloc](https://github.com/hse-malloc/malloc):
+
+```sh
+LD_PRELOAD="/path/to/libmalloc.so:/path/to/libhse_malloc.so" <program>
+```
+
 #### Randomization
 
 By default, address randomization is **enabled**.  
-You can disable it by passing following argument while [generation](#generate):
+You can *disable* it by passing following argument while [generation](#generate):
 
 ```sh
 -DHSE_MALLOC_NO_RANDOM=TRUE
