@@ -43,10 +43,10 @@ target_include_directories(hse_${PROJECT_NAME}
 )
 target_compile_features(hse_${PROJECT_NAME} PRIVATE cxx_std_20)
 target_compile_options(hse_${PROJECT_NAME}
-	PUBLIC
-		$<$<CXX_COMPILER_ID:Clang>:
-			-nostdinc++
-		>
+        PUBLIC
+                $<$<CXX_COMPILER_ID:Clang>:
+                        -stdlib=libc++
+                >
 	PRIVATE
 		$<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>:
 			-Wall
