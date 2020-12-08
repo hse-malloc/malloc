@@ -91,4 +91,12 @@ void *aligned_alloc(std::size_t alignment, std::size_t size) noexcept {
     }
 }
 
+std::size_t malloc_usable_size (void *ptr) noexcept{
+    DEBUG_LOG("malloc_usable_size");
+    if (ptr==nullptr){
+        return 0;
+    }
+    return _allocator.dataSize(reinterpret_cast<std::uintptr_t>(ptr));
+}
+
 } // namespace hse

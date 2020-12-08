@@ -261,4 +261,9 @@ std::size_t Allocator::shiftToAlignData(const MemoryControlBlock *mcb, std::size
     return math::roundUp(data, alignment) - data;
 }
 
+std::size_t Allocator::dataSize(std::uintptr_t ptr) const noexcept {
+    return MemoryControlBlock::fromDataPtr(ptr)->size();
+}
+
+
 } // namespace hse::memory

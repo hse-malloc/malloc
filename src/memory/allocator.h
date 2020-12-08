@@ -95,6 +95,9 @@ class Allocator {
 
     // free deallocates memory pointed by given pointer
     void free(std::uintptr_t);
+
+    // size returns the size in bytes of data stored in MCB holding provided pointer
+    std::size_t dataSize(std::uintptr_t ptr) const noexcept;
 };
 } // namespace hse::memory
 
