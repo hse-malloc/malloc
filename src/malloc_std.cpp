@@ -24,6 +24,8 @@ void *realloc(void *ptr, size_t size) noexcept { return hse::realloc(ptr, size);
 
 void *aligned_alloc(size_t alignment, size_t size) noexcept { return hse::aligned_alloc(alignment, size); }
 
+size_t malloc_usable_size (void *ptr) noexcept { return hse::malloc_usable_size(ptr);}
+
 } // extern "C"
 } // namespace std
 

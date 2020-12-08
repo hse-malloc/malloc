@@ -38,6 +38,13 @@ TEST_CASE("malloc: array of bytes", "[malloc][free]") {
     hse::free(ptr);
 }
 
+TEST_CASE("malloc array of bytes and check capacity", "[malloc][free][malloc_usable_size]") {
+    auto *ptr = reinterpret_cast<std::uint8_t *>(hse::malloc(BIG_NUMBER * sizeof(std::uint8_t)));
+    testArray(std::span{ptr, BIG_NUMBER});
+    REQUIRE(hse::malloc_usable_size(ptr)>=BIG_NUMBER * sizeof(std::uint8_t));
+    hse::free(ptr);
+}
+
 TEST_CASE("malloc: big object", "[malloc][free]") {
     struct S {
         std::array<std::uint8_t, BIG_NUMBER> data;
