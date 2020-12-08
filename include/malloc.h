@@ -26,8 +26,13 @@ __NODISCARD__ void *malloc(size_t) __NOEXCEPT__;
 __NODISCARD__ void *calloc(size_t count, size_t size) __NOEXCEPT__;
 __NODISCARD__ void *realloc(void *ptr, size_t size) __NOEXCEPT__;
 __NODISCARD__ void *aligned_alloc(size_t alignment, size_t size) __NOEXCEPT__;
+__NODISCARD__ void *memalign(size_t alignment, size_t size) __NOEXCEPT__;
 __NODISCARD__ size_t malloc_usable_size (void *ptr) __NOEXCEPT__
-void free(void *) __NOEXCEPT__;
+__NODISCARD__ void *memalign(size_t alignment, size_t size) __NOEXCEPT__;
+__NODISCARD__ void *pvalloc(size_t size) __NOEXCEPT__;
+__NODISCARD__ void *valloc(size_t size) __NOEXCEPT__;
+__NODISCARD__ int posix_memalign(void **memptr, size_t alignment, size_t size) __NOEXCEPT__;
+__NODISCARD__ void free(void *) __NOEXCEPT__;
 
 #ifdef __cplusplus
 } // extern "C"
